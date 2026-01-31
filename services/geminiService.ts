@@ -1,9 +1,18 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { OptimizationResult, GithubRepo } from "../types";
 
-// Initialize Gemini Client
-// Note: API Key must be set in environment variables
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize Gemini Client lazily to avoid breaking the app when API key is missing
+let _ai: GoogleGenAI | null = null;
+function getAI(): GoogleGenAI {
+  if (!_ai) {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY가 설정되지 않았습니다. .env.local 파일을 확인해주세요.");
+    }
+    _ai = new GoogleGenAI({ apiKey });
+  }
+  return _ai;
+}
 
 /**
  * 1단계: 채용 공고(JD)를 분석하여 맞춤형 프롬프트(페르소나)를 생성합니다.
@@ -25,7 +34,7 @@ async function generateTailoredInstruction(jobDescription: string): Promise<stri
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: metaPrompt,
     });
@@ -89,7 +98,7 @@ export const optimizeResume = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await getAI().models.generateContent({
       model: 'gemini-3-pro-preview', // Pro 모델 사용 (복합 추론 및 작문 능력 우수)
       contents: finalPrompt,
       config: {
