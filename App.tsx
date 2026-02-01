@@ -3,8 +3,8 @@ import { Stepper } from './components/Stepper';
 import { UploadStep } from './components/UploadStep';
 import { AnalysisStep } from './components/AnalysisStep';
 import { ReviewStep } from './components/ReviewStep';
-import { AppStep, UserInputData, OptimizationResult } from './types';
-import { optimizeResume } from './services/geminiService';
+import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from './types';
+import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from './services/geminiService';
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.UPLOAD);
@@ -13,25 +13,53 @@ const App: React.FC = () => {
     resumeText: '',
     jobDescription: '',
     githubRepos: [{ url: '', description: '' }],
+    githubData: undefined,
   });
 
-  const [result, setResult] = useState<OptimizationResult | null>(null);
+  const [result, setResult] = useState<CoachingResult | null>(null);
+  const [instruction, setInstruction] = useState<TailoredInstructionWithRequirements | null>(null);
+  const [analysisStage, setAnalysisStage] = useState<'jd-analysis' | 'resume-analysis' | 'coaching' | 'evidence-matching'>('jd-analysis');
 
   const handleInputChange = <K extends keyof UserInputData>(field: K, value: UserInputData[K]) => {
     setUserData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleStartAnalysis = useCallback(async () => {
+  const handleStartAnalysis = useCallback(async (freshGithubData?: GitHubFetchResult[]) => {
+    const githubData = freshGithubData ?? userData.githubData;
     setCurrentStep(AppStep.ANALYSIS);
+    setAnalysisStage('jd-analysis');
 
     try {
-      const optimizationResult = await optimizeResume(
+      // Stage 1: JD 분석
+      const instructionResult = await generateTailoredInstruction(userData.jobDescription);
+      setInstruction(instructionResult);
+      const instruction = instructionResult;
+
+      // Stage 2a+2b: 분석 → 코칭 생성 (내부에서 stage 전환)
+      const coachingResult = await coachResume(
         userData.resumeText,
         userData.jobDescription,
-        userData.githubRepos
+        instruction,
+        userData.githubRepos,
+        githubData,
+        (stage) => setAnalysisStage(stage)
       );
 
-      setResult(optimizationResult);
+      // Stage 3: Evidence Bank (optional)
+      let finalResult = coachingResult;
+      const successfulFetches = githubData?.filter(d => d.status === 'success') ?? [];
+      if (successfulFetches.length > 0) {
+        setAnalysisStage('evidence-matching');
+        try {
+          const evidenceBank = await enrichEvidenceBank(instruction, githubData!);
+          const emptyBank = evidenceBank.repos.length === 0 && evidenceBank.highlights.length === 0;
+          finalResult = { ...coachingResult, evidenceBank: emptyBank ? undefined : evidenceBank };
+        } catch (e) {
+          console.warn("Evidence matching failed, continuing without:", e);
+        }
+      }
+
+      setResult(finalResult);
       setCurrentStep(AppStep.REVIEW);
     } catch (error) {
       console.error(error);
@@ -42,27 +70,35 @@ const App: React.FC = () => {
 
   const handleRestart = () => {
     setResult(null);
-    setUserData({ resumeText: '', jobDescription: '', githubRepos: [{ url: '', description: '' }] });
+    setAnalysisStage('jd-analysis');
+    setUserData({ resumeText: '', jobDescription: '', githubRepos: [{ url: '', description: '' }], githubData: undefined });
     setCurrentStep(AppStep.UPLOAD);
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-surface-50">
+    <div className="min-h-screen flex flex-col bg-dark-950 relative">
+
+      {/* Aurora Background */}
+      <div className="aurora-bg">
+        <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] rounded-full bg-brand-500/10 blur-[120px] animate-aurora-1" />
+        <div className="absolute top-[30%] right-[-15%] w-[500px] h-[500px] rounded-full bg-violet-500/8 blur-[100px] animate-aurora-2" />
+        <div className="absolute bottom-[-10%] left-[20%] w-[400px] h-[400px] rounded-full bg-cyan-400/6 blur-[80px] animate-aurora-3" />
+      </div>
 
       {/* Navbar */}
-      <header className="bg-white/70 glass border-b border-slate-200/50 sticky top-0 z-50">
+      <header className="bg-dark-900/60 glass border-b border-white/[0.06] sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-5 sm:px-8">
           <div className="flex justify-between h-14 items-center">
             <div className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20">
+                <div className="w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-700 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
                   <svg className="w-[18px] h-[18px] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
               </div>
               <div>
-                <span className="font-extrabold text-[17px] tracking-tight text-slate-900">
+                <span className="font-extrabold text-[17px] tracking-tight text-white">
                   Resum<span className="text-gradient">meter</span>
                 </span>
               </div>
@@ -73,7 +109,7 @@ const App: React.FC = () => {
                 href="https://github.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors rounded-xl hover:bg-slate-100"
+                className="w-9 h-9 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors rounded-xl hover:bg-white/5"
               >
                 <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
                   <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
@@ -85,7 +121,7 @@ const App: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full relative z-10">
         <div className="max-w-6xl mx-auto px-5 sm:px-8 py-6">
 
           {currentStep !== AppStep.ANALYSIS && (
@@ -105,7 +141,7 @@ const App: React.FC = () => {
 
             {currentStep === AppStep.ANALYSIS && (
               <div className="animate-fade-in">
-                <AnalysisStep />
+                <AnalysisStep stage={analysisStage} />
               </div>
             )}
 
@@ -114,6 +150,7 @@ const App: React.FC = () => {
                 <ReviewStep
                   originalData={userData}
                   result={result}
+                  instruction={instruction!}
                   onRestart={handleRestart}
                 />
               </div>
@@ -122,8 +159,8 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="border-t border-slate-200/50 py-5 mt-auto">
-        <div className="max-w-6xl mx-auto px-5 text-center text-slate-400 text-[11px] tracking-wide">
+      <footer className="border-t border-white/[0.06] py-5 mt-auto">
+        <div className="max-w-6xl mx-auto px-5 text-center text-zinc-600 text-[11px] tracking-wide">
           &copy; {new Date().getFullYear()} Resummeter &middot; Powered by Google Gemini
         </div>
       </footer>

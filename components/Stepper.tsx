@@ -21,14 +21,14 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
         return (
           <React.Fragment key={step.id}>
             {i > 0 && (
-              <div className={`w-12 h-px transition-colors duration-500 ${isCompleted ? 'bg-brand-400' : 'bg-slate-200'}`} />
+              <div className={`w-12 h-px transition-colors duration-500 ${isCompleted ? 'bg-brand-500/50' : 'bg-zinc-800'}`} />
             )}
             <div className="flex items-center gap-2">
               <div
                 className={`w-7 h-7 rounded-lg flex items-center justify-center text-[11px] font-bold transition-all duration-400 section-num
-                  ${isCompleted ? 'bg-brand-500 text-white' : ''}
-                  ${isCurrent ? 'bg-brand-50 text-brand-600 ring-1 ring-brand-200' : ''}
-                  ${!isCompleted && !isCurrent ? 'bg-slate-100 text-slate-400' : ''}
+                  ${isCompleted ? 'bg-brand-500 text-white shadow-sm shadow-brand-500/30' : ''}
+                  ${isCurrent ? 'bg-brand-500/15 text-brand-400 ring-1 ring-brand-500/30' : ''}
+                  ${!isCompleted && !isCurrent ? 'bg-zinc-800/50 text-zinc-600' : ''}
                 `}
               >
                 {isCompleted ? (
@@ -38,7 +38,7 @@ export const Stepper: React.FC<StepperProps> = ({ currentStep }) => {
                 ) : step.num}
               </div>
               <span className={`text-[13px] font-semibold transition-colors duration-300 hidden sm:inline
-                ${isCurrent ? 'text-slate-800' : isCompleted ? 'text-brand-500' : 'text-slate-400'}
+                ${isCurrent ? 'text-zinc-200' : isCompleted ? 'text-brand-500' : 'text-zinc-600'}
               `}>
                 {step.label}
               </span>
