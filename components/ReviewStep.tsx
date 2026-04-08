@@ -10,6 +10,17 @@ import { NarrativeSectionView } from './NarrativeSectionView';
 import { generateNarrativeSections } from '../services/geminiService';
 import * as Diff from 'diff';
 import { marked } from 'marked';
+import AtsScoreView from './AtsScoreView';
+import DetailedScoreView from './DetailedScoreView';
+import { CareerStatementView } from './CareerStatementView';
+import { CoverLetterView } from './CoverLetterView';
+import MockInterviewView from './MockInterviewView';
+import SkillGapView from './SkillGapView';
+import LinkedInOptView from './LinkedInOptView';
+import VersionManagerView from './VersionManagerView';
+import { AboutStatementView } from './AboutStatementView';
+import { analyzeAtsScore, analyzeDetailedScore } from '../services/atsService';
+import type { AtsScore, DetailedScore } from '../types';
 
 interface ReviewStepProps {
   originalData: UserInputData;
@@ -18,7 +29,7 @@ interface ReviewStepProps {
   onRestart: () => void;
 }
 
-type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative';
+type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement';
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, instruction, onRestart }) => {
   const [activeTab, setActiveTab] = useState<ReviewTab>('gap-map');
@@ -34,6 +45,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const [narrativeResult, setNarrativeResult] = useState<NarrativeGenerationResult | null>(null);
   const [isGeneratingNarrative, setIsGeneratingNarrative] = useState(false);
   const [narrativeProgress, setNarrativeProgress] = useState<{ completed: number; total: number } | undefined>();
+
+  // ATS & Scoring state
+  const [atsScore, setAtsScore] = useState<AtsScore | null>(null);
+  const [isLoadingAts, setIsLoadingAts] = useState(false);
+  const [detailedScore, setDetailedScore] = useState<DetailedScore | null>(null);
+  const [isLoadingDetailed, setIsLoadingDetailed] = useState(false);
+
 
   const handleFrameworkChange = (fw: NarrativeFramework) => {
     setNarrativeFramework(fw);
@@ -56,6 +74,27 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       setNarrativeProgress(undefined);
     }
   };
+
+  // ATS analysis
+  const handleAnalyzeAts = async () => {
+    setIsLoadingAts(true);
+    try {
+      const score = await analyzeAtsScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction));
+      setAtsScore(score);
+    } catch (e) { console.error(e); }
+    finally { setIsLoadingAts(false); }
+  };
+
+  // Detailed scoring
+  const handleAnalyzeDetailed = async () => {
+    setIsLoadingDetailed(true);
+    try {
+      const score = await analyzeDetailedScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction));
+      setDetailedScore(score);
+    } catch (e) { console.error(e); }
+    finally { setIsLoadingDetailed(false); }
+  };
+
 
   const toggleAction = (actionId: string) => {
     setAcceptedActions(prev => {
@@ -139,7 +178,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     { key: 'actions', label: '코칭 제안', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
     { key: 'evidence', label: 'GitHub 근거', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' },
     { key: 'resume', label: '이력서', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-    { key: 'narrative' as ReviewTab, label: '서술형', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+    { key: 'narrative', label: '서술형', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+    { key: 'ats-score', label: 'ATS', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { key: 'detailed-score', label: '상세 점수', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    { key: 'career-statement', label: '경력기술서', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+    { key: 'cover-letter', label: '커버레터', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+    { key: 'interview', label: '모의면접', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+    { key: 'skill-gap', label: '학습 경로', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+    { key: 'linkedin', label: 'LinkedIn', icon: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2V9zm2-2a2 2 0 110-4 2 2 0 010 4z' },
+    { key: 'versions', label: '버전 관리', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    { key: 'about-statement', label: '한줄소개', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
   ];
 
   return (
@@ -157,18 +205,18 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
       {/* Tab Bar */}
       <div className="glass-card rounded-2xl overflow-hidden">
-        <div className="flex border-b border-white/[0.06]">
+        <div className="flex border-b border-white/[0.06] overflow-x-auto custom-scrollbar">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => { setActiveTab(tab.key); if (tab.key !== 'actions') setHighlightedGap(null); }}
-              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-[12px] font-semibold transition-all ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-3 text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === tab.key
                   ? 'text-brand-400 border-b-2 border-brand-400 bg-brand-500/10'
                   : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]'
               }`}
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={tab.icon} />
               </svg>
               {tab.label}
@@ -275,6 +323,104 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 />
               )}
             </div>
+          )}
+
+          {/* ATS Score Tab */}
+          {activeTab === 'ats-score' && atsScore && (
+            <AtsScoreView atsScore={atsScore} />
+          )}
+          {activeTab === 'ats-score' && !atsScore && (
+            <div className="text-center py-12">
+              <button
+                onClick={handleAnalyzeAts}
+                disabled={isLoadingAts}
+                className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+              >
+                {isLoadingAts ? '분석 중...' : 'ATS 점수 분석'}
+              </button>
+            </div>
+          )}
+
+          {/* Detailed Score Tab */}
+          {activeTab === 'detailed-score' && detailedScore && (
+            <DetailedScoreView detailedScore={detailedScore} />
+          )}
+          {activeTab === 'detailed-score' && !detailedScore && (
+            <div className="text-center py-12">
+              <button
+                onClick={handleAnalyzeDetailed}
+                disabled={isLoadingDetailed}
+                className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+              >
+                {isLoadingDetailed ? '분석 중...' : '상세 점수 분석'}
+              </button>
+            </div>
+          )}
+
+          {/* Career Statement Tab */}
+          {activeTab === 'career-statement' && (
+            <CareerStatementView
+              resumeText={originalData.resumeText}
+              jobDescription={originalData.jobDescription}
+              instruction={instruction}
+              githubData={originalData.githubData}
+            />
+          )}
+
+          {/* Cover Letter Tab */}
+          {activeTab === 'cover-letter' && (
+            <CoverLetterView
+              resumeText={originalData.resumeText}
+              jobDescription={originalData.jobDescription}
+              instruction={instruction}
+              coachingResult={result}
+            />
+          )}
+
+          {/* Interview Tab */}
+          {activeTab === 'interview' && (
+            <MockInterviewView
+              resumeText={originalData.resumeText}
+              jobDescription={originalData.jobDescription}
+              instruction={instruction}
+            />
+          )}
+
+          {/* Skill Gap Tab */}
+          {activeTab === 'skill-gap' && (
+            <SkillGapView
+              gapMap={result.gapMap}
+              jobDescription={originalData.jobDescription}
+              instruction={instruction}
+            />
+          )}
+
+          {/* LinkedIn Tab */}
+          {activeTab === 'linkedin' && (
+            <LinkedInOptView
+              resumeText={originalData.resumeText}
+              jobDescription={originalData.jobDescription}
+              instruction={instruction}
+            />
+          )}
+
+          {/* Versions Tab */}
+          {activeTab === 'versions' && (
+            <VersionManagerView
+              currentResumeText={editedResume}
+              currentJobDescription={originalData.jobDescription}
+              currentScore={result.matchScore}
+            />
+          )}
+
+          {/* About Statement Tab */}
+          {activeTab === 'about-statement' && (
+            <AboutStatementView
+              resumeText={originalData.resumeText}
+              jobDescription={originalData.jobDescription}
+              instruction={instruction}
+              coachingResult={result}
+            />
           )}
 
           {/* Resume Tab */}

@@ -152,7 +152,9 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
 // ─────────────────────────────────────────────────────────────
 
 export function formatRepoInfo(githubRepos: GithubRepo[], githubData?: GitHubFetchResult[]): string {
-  return githubRepos.map((repo, idx) => {
+  const validRepos = githubRepos.filter(r => r.url.trim() !== '');
+  if (validRepos.length === 0) return '';
+  return validRepos.map((repo, idx) => {
     const fetchResult = githubData?.find(d => d.repoUrl === repo.url);
     const hasVerifiedData = fetchResult?.status === 'success' && fetchResult.data;
 
@@ -233,10 +235,7 @@ ${resumeText}
 [채용 공고 원문]
 ${jobDescription}
 
-[GitHub 리포지토리 (참고용)]
-${repoInfo}
-
-[분석 태스크]
+${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}[분석 태스크]
 각 JD 요구사항에 대해:
 1. 이력서에서 관련 문장을 정확히 찾아 before에 원문 그대로 인용하십시오.
 2. strong(명확히 충족) / weak(부분 충족) / missing(전혀 언급 없음)으로 판정하십시오.
@@ -327,7 +326,7 @@ ${today} — 이 날짜 기준으로 과거/현재/미래를 판단하십시오.
 원칙 1: 아래 [분석 결과]에 명시된 항목만 코칭합니다.
 원칙 2: after는 before 문장의 단어를 재배열/압축/구체화한 결과입니다. 새로운 내용 창작이 아닙니다.
 원칙 3: 이력서 원문에 없는 기술명/회사명/수치는 반드시 [플레이스홀더]로 표시합니다.
-원칙 4: GitHub 데이터는 evidence.content에만 기재합니다. after 문장에는 포함하지 않습니다.
+${repoInfo ? '원칙 4: GitHub 데이터는 evidence.content에만 기재합니다. after 문장에는 포함하지 않습니다.' : ''}
 
 [Few-shot 예시 — GOOD vs BAD]
 
@@ -373,10 +372,7 @@ ${JSON.stringify(analysis.analysisItems, null, 2)}
 [이력서 원문 (before 검증용)]
 ${resumeText}
 
-[GitHub 리포지토리 (evidence 작성용)]
-${repoInfo}
-
-[생성 태스크]
+${repoInfo ? `[GitHub 리포지토리 (evidence 작성용)]\n${repoInfo}\n` : ''}[생성 태스크]
 각 analysisItem에 대해:
 1. before: 분석 결과의 before를 그대로 복사하십시오.
 2. suggestion: issue + direction을 2-3문장 코칭 지시("~하세요" 형태)로 확장하십시오.
@@ -392,7 +388,7 @@ ${repoInfo}
 
 [검증 규칙]
 - after에 이력서 원문에 없는 고유명사(기술명, 회사명, 프레임워크명)가 등장하면 해당 항목은 무효입니다.
-- GitHub 데이터는 evidence.content에만 기재하십시오. after 문장에 직접 삽입하지 마십시오.
+${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. after 문장에 직접 삽입하지 마십시오.' : ''}
 - after가 원문과 완전히 다른 문장이 되어서는 안 됩니다. 원문의 골격을 유지하면서 표현만 개선하십시오.`;
 
   try {
@@ -891,10 +887,15 @@ function buildNarrativePrompt(
 - 구현: 전체의 25-30%
 - 임팩트: 전체의 15-25%`;
 
+  const hasRepos = repoInfo.length > 0;
   const sectionTypeInstruction: Record<string, string> = {
-    'self-introduction': '개발 철학과 커리어 서사를 중심으로, GitHub 활동을 통해 증명된 핵심 가치와 JD 요구사항의 연결점을 자연스럽게 풀어내십시오.',
+    'self-introduction': hasRepos
+      ? '개발 철학과 커리어 서사를 중심으로, GitHub 활동을 통해 증명된 핵심 가치와 JD 요구사항의 연결점을 자연스럽게 풀어내십시오.'
+      : '개발 철학과 커리어 서사를 중심으로, 이력서에 기술된 경험과 JD 요구사항의 연결점을 자연스럽게 풀어내십시오.',
     'career-project': '가장 성과가 좋았던 프로젝트를 중심으로 기술적 문제 해결 과정을 구체적으로 서술하십시오. 반드시 프레임워크 구조 분해(breakdown)를 포함하십시오.',
-    'technical-skills': 'JD에서 요구하는 기술과 본인의 GitHub 활동/이력서의 교집합을 강조하십시오. 각 기술에 대한 구체적 활용 경험을 포함하십시오.',
+    'technical-skills': hasRepos
+      ? 'JD에서 요구하는 기술과 본인의 GitHub 활동/이력서의 교집합을 강조하십시오. 각 기술에 대한 구체적 활용 경험을 포함하십시오.'
+      : 'JD에서 요구하는 기술과 이력서에 기술된 경험의 교집합을 강조하십시오. 각 기술에 대한 구체적 활용 경험을 포함하십시오.',
     'motivation': '지원 회사/직무에 대한 관심의 구체적 계기와, 본인의 경험이 어떻게 기여할 수 있는지 연결하십시오.',
     'growth-plan': '입사 후 구체적인 성장 계획과 기여 방향을 JD의 우대사항/선호경험과 연결하여 제시하십시오.',
     'custom': spec.prompt || '사용자가 제공한 방향에 따라 작성하십시오.',
@@ -931,9 +932,9 @@ ${sectionTypeInstruction[spec.type] || sectionTypeInstruction['custom']}
 3. 겸손하지만 자신감 있는 어조를 유지하십시오.
 
 [반환각 방지 — 절대 규칙]
-1. 이력서와 GitHub 데이터에 명시된 내용만 활용하십시오.
+1. 이력서${hasRepos ? '와 GitHub 데이터' : ''}에 명시된 내용만 활용하십시오.
 2. 없는 경험/기술/수치는 [구체적 경험 기입] 또는 [수치 기입] 플레이스홀더를 사용하십시오.
-3. GitHub 데이터에서 확인 가능한 기술명만 본문에 포함하십시오.
+${hasRepos ? '3. GitHub 데이터에서 확인 가능한 기술명만 본문에 포함하십시오.' : ''}
 
 [JD 구조화 결과]
 - 페르소나: ${instruction.persona}
@@ -952,8 +953,7 @@ ${resumeText}
 [채용 공고 원문]
 ${jobDescription}
 
-[GitHub 리포지토리]
-${repoInfo}
+${repoInfo ? `[GitHub 리포지토리]\n${repoInfo}` : ''}
 ${coachingContext}`;
 }
 

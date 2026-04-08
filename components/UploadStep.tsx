@@ -123,8 +123,8 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }
   };
 
   const githubRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\/[a-zA-Z0-9._-]+$/;
-  const areReposValid = repos.every(repo => {
-    if (repo.url === '') return false;
+  const reposWithInput = repos.filter(repo => repo.url !== '');
+  const areReposValid = reposWithInput.length === 0 || reposWithInput.every(repo => {
     const repoPath = repo.url.replace('https://github.com/', '');
     return githubRegex.test(repoPath);
   });

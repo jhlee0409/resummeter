@@ -39,19 +39,36 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
 
+  // Calculate dropdown position when it opens
   useEffect(() => {
     if (!dropdownOpen) return;
     const rect = addBtnRef.current?.getBoundingClientRect();
     if (rect) {
       setDropdownPos({ top: rect.bottom + 8, left: rect.left, width: rect.width });
     }
-    const handleClickOutside = (e: MouseEvent) => {
-      if (!dropdownRef.current?.contains(e.target as Node) && !addBtnRef.current?.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
+  }, [dropdownOpen]);
+
+  // Handle click outside to close dropdown
+  useEffect(() => {
+    if (!dropdownOpen) return;
+
+    let removeListener: (() => void) | null = null;
+
+    // Use setTimeout to avoid the click event that just opened the dropdown
+    const timeoutId = setTimeout(() => {
+      const handleClickOutside = (e: MouseEvent) => {
+        if (!dropdownRef.current?.contains(e.target as Node) && !addBtnRef.current?.contains(e.target as Node)) {
+          setDropdownOpen(false);
+        }
+      };
+      document.addEventListener('click', handleClickOutside);
+      removeListener = () => document.removeEventListener('click', handleClickOutside);
+    }, 10);
+
+    return () => {
+      clearTimeout(timeoutId);
+      removeListener?.();
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [dropdownOpen]);
 
   const togglePromptExpanded = (specId: string) => {

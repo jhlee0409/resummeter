@@ -35,3 +35,9 @@ pnpm preview         # 빌드 결과 미리보기
 - **스타일링**: Tailwind CSS (CDN). 컴포넌트 내 유틸리티 클래스 직접 사용.
 - **타입**: `types.ts`에 모든 공유 인터페이스/enum 정의 (`OptimizationResult`, `UserInputData`, `GithubRepo`, `AppStep`)
 - **PDF 파싱**: `pdfjs-dist` 의존성 있음 (이력서 PDF 업로드 지원용)
+
+## gstack
+
+Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
+
+Available skills: `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`, `/design-consultation`, `/design-shotgun`, `/design-html`, `/review`, `/ship`, `/land-and-deploy`, `/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`, `/setup-browser-cookies`, `/setup-deploy`, `/retro`, `/investigate`, `/document-release`, `/codex`, `/cso`, `/autoplan`, `/plan-devex-review`, `/devex-review`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/learn`.
