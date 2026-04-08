@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { NarrativeSectionSpec, NarrativeFramework, NarrativeSectionType } from '../types';
 
 interface NarrativeConfigPanelProps {
@@ -322,12 +323,12 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
             )}
           </button>
 
-          {/* Dropdown - fixed positioning to escape overflow:hidden parents */}
-          {dropdownOpen && (
+          {/* Dropdown - portal to body to escape overflow:hidden parents */}
+          {dropdownOpen && createPortal(
             <div
               ref={dropdownRef}
-              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width }}
-              className="bg-zinc-900 border border-white/20 rounded-xl shadow-xl shadow-black/50 overflow-hidden z-50"
+              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+              className="bg-zinc-900 border border-white/20 rounded-xl shadow-xl shadow-black/50 overflow-hidden"
             >
               {(Object.entries(SECTION_TYPE_LABELS) as Array<[NarrativeSectionType, string]>).map(([type, label]) => (
                 <button
@@ -342,7 +343,8 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
                   {label}
                 </button>
               ))}
-            </div>
+            </div>,
+            document.body
           )}
         </div>
       </div>
