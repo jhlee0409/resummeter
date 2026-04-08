@@ -381,8 +381,8 @@ const TONE_DEFINITIONS = {
 export async function refineAboutStatement(
   originalStatement: string,
   resumeText: string,
-  jobDescription: string,
-  instruction: TailoredInstructionWithRequirements,
+  _jobDescription: string,
+  _instruction: TailoredInstructionWithRequirements,
   coachingResult?: CoachingResult
 ): Promise<AboutStatementResult> {
   const today = new Date().toISOString().split('T')[0];
@@ -397,8 +397,8 @@ export async function refineAboutStatement(
 
   const prompt = `[역할]
 당신은 개인 브랜딩 전문가입니다.
-한 줄 자기소개(About Statement)를 JD와 이력서 맥락에 맞게 다듬는 전문가입니다.
-짧은 문장 안에 핵심 역량과 차별점을 녹여내는 것이 당신의 전문 분야입니다.
+이력서를 분석하여 그 사람을 가장 잘 표현하는 한 줄 자기소개를 다듬는 전문가입니다.
+특정 채용 공고에 맞추지 않고, 범용적으로 본인의 핵심 역량과 차별점을 드러내는 것이 목표입니다.
 
 [현재 날짜]
 ${today}
@@ -406,25 +406,16 @@ ${today}
 [핵심 원칙]
 원칙 1 (의도 보존): 원본 문장의 핵심 메시지와 정체성을 반드시 유지하십시오.
 원칙 2 (날조 금지): 이력서에 명시된 내용만 활용하십시오. 없는 경력이나 기술을 만들어내지 마십시오.
-원칙 3 (자연스러운 키워드): JD 키워드를 억지로 넣지 말고, 문맥에 자연스럽게 녹여내십시오.
+원칙 3 (범용성): 특정 회사나 직무에 맞추지 말고, 이 사람의 현재 역량을 가장 잘 표현하십시오.
 원칙 4 (간결함): 한 줄 자기소개는 50-100자 내외로 유지하십시오.
 원칙 5 (톤 차별화): 각 톤별로 명확하게 다른 느낌의 문장을 작성하십시오.
 
 [원본 자기소개]
 ${originalStatement}
-
-[JD 분석 결과]
-- 페르소나: ${instruction.persona}
-- 핵심 키워드: ${instruction.keywords.slice(0, 10).join(', ')}
-- Hard Skills: ${instruction.evaluationCriteria.hardSkills.slice(0, 5).join(', ')}
-- Soft Skills: ${instruction.evaluationCriteria.softSkills.slice(0, 5).join(', ')}
 ${strengthsContext ? `\n[지원자 주요 강점]\n${strengthsContext}` : ''}
 
-[이력서 원문 (참고용)]
+[이력서 원문]
 ${resumeText.slice(0, 2000)}
-
-[채용 공고 (참고용)]
-${jobDescription.slice(0, 1500)}
 
 [톤별 작성 가이드]
 1. professional (격식있는): ${TONE_DEFINITIONS.professional.guide}
@@ -437,7 +428,7 @@ ${jobDescription.slice(0, 1500)}
 3. 각 버전에서:
    - 원본의 핵심 의도를 보존하면서 더 명확하고 매력적으로 다듬으십시오.
    - 이력서에서 확인된 구체적 강점이나 수치를 자연스럽게 녹여내십시오.
-   - JD 키워드를 억지스럽지 않게 반영하십시오.
+   - 이력서의 핵심 기술과 도메인 키워드를 자연스럽게 녹여내십시오.
    - 50-100자 내외로 간결하게 유지하십시오.
 4. 가장 추천하는 버전을 선정하고 그 이유를 설명하십시오.`;
 

@@ -85,7 +85,7 @@ export function AboutStatementView({
       <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6">
         <h2 className="text-2xl font-bold text-white mb-2">한 줄 자기소개 고도화</h2>
         <p className="text-slate-400 mb-6">
-          대략적으로 작성한 자기소개를 JD와 이력서에 맞게 3가지 톤으로 다듬어 드립니다.
+          대략적으로 작성한 자기소개를 이력서 기반으로 나를 가장 잘 표현하는 1-2줄로 다듬어 드립니다.
         </p>
 
         {/* Input Area */}
