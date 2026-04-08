@@ -104,6 +104,12 @@ ${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}` : ''}
 - 사진, 가족관계 제외
 - 오직 직무 역량과 성과만 포함
 
+[NCS 직업기초능력 매핑]
+각 경력기술서 항목이 아래 NCS 직업기초능력 중 어떤 것을 증명하는지 명시하십시오:
+의사소통능력, 수리능력, 문제해결능력, 자기개발능력, 자원관리능력,
+대인관계능력, 정보능력, 기술능력, 조직이해능력, 직업윤리
+각 항목의 relatedJdKeywords에 해당 NCS 능력을 태그로 포함하십시오.
+
 [STAR 작성 가이드]
 - S: 2-3문장으로 배경 설명
 - T: 1-2문장으로 목표 명시
@@ -283,12 +289,15 @@ ${today}
 - 추론 금지: 이력서에 명시적으로 기재된 사실만 활용하십시오. "~했을 것이다", "~경험이 있을 수 있다"는 절대 금지입니다.
 - 기타 이력이라도 정량적 성과나 명확한 임팩트가 있으면 적극 활용하십시오.
 
-[AI 탐지 회피]
-- 과도한 열정 표현 금지 ("열정적으로", "끊임없이 노력하는", "항상 도전하는")
+[인간다운 문체 — AI 탐지 대응]
+- 문장 길이를 의도적으로 변화시키십시오 (10자 짧은 문장과 50자 긴 문장을 섞기)
+- 금지 단어: "활용하여", "기반으로", "통해", "바탕으로" — 각 1회 이하로 제한
+- 구체적 동사 사용: "했다/만들었다" 대신 "구축했다/설계했다/줄였다/끌어올렸다"
+- 접속사 변화: "그리고", "또한", "이를 통해"를 반복하지 마십시오
+- 과도한 열정 표현 금지 ("열정적으로", "끊임없이 노력하는")
 - 추상적 미사여구 금지 ("다양한 경험을 통해 성장한", "폭넓은 시야를 가진")
 - 뻔한 서론/결론 패턴 금지 ("저는 ~하는 사람입니다", "이러한 경험을 바탕으로")
-- 자연스러운 구어체 문장 구조를 사용하십시오
-- 구체적 사실과 수치로 설득하고, 감정적 표현으로 설득하지 마십시오
+- 개인적 경험의 디테일을 포함하십시오 (시간, 장소, 팀 구성 등 구체적 맥락)
 
 ${styleGuide}
 
@@ -306,6 +315,13 @@ ${resumeText}
 [채용 공고]
 ${jobDescription}
 ${coachingContext}
+
+[자기 검증]
+작성 완료 후 검증하십시오:
+1. 이력서에 없는 경험/수치가 포함되었는가? → 삭제 또는 [기입] 처리
+2. "활용하여/기반으로/통해/바탕으로"가 각 1회 이하인가?
+3. 문장 길이가 균일하지 않은가? (짧은/긴 문장 혼재 필요)
+4. 뻔한 서론으로 시작하지 않았는가?
 
 [작성 태스크]
 위 구조에 따라 완성도 높은 지원동기서를 작성하십시오.
@@ -335,12 +351,14 @@ Principle 4: Use specific, authentic expressions.
 - 추론 금지: 이력서에 명시적으로 기재된 사실만 활용하십시오. "~했을 것이다", "~경험이 있을 수 있다"는 절대 금지입니다.
 - 기타 이력이라도 정량적 성과나 명확한 임팩트가 있으면 적극 활용하십시오.
 
-[AI 탐지 회피]
-- 과도한 열정 표현 금지 ("열정적으로", "끊임없이 노력하는", "항상 도전하는")
-- 추상적 미사여구 금지 ("다양한 경험을 통해 성장한", "폭넓은 시야를 가진")
-- 뻔한 서론/결론 패턴 금지 ("저는 ~하는 사람입니다", "이러한 경험을 바탕으로")
-- 자연스러운 구어체 문장 구조를 사용하십시오
-- 구체적 사실과 수치로 설득하고, 감정적 표현으로 설득하지 마십시오
+[Human-like Writing — AI Detection Avoidance]
+- Vary sentence lengths intentionally (mix 5-word sentences with 30-word sentences)
+- Banned overused words: "leverage", "utilize", "spearhead", "passionate" — use max once each
+- Use specific verbs: "built/designed/reduced/grew" instead of "managed/handled/worked on"
+- Avoid repeating connectors: "Additionally", "Furthermore", "Moreover"
+- No excessive enthusiasm ("passionate about", "driven by", "dedicated to")
+- No abstract clichés ("diverse experience", "broad perspective", "proven track record")
+- Include personal context details (timeline, team size, specific constraints)
 
 ${styleGuide}
 
