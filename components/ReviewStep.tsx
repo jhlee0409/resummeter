@@ -97,9 +97,29 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
 
   const toggleAction = (actionId: string) => {
+    const action = result.actionItems.find(a => a.id === actionId);
+    if (!action) return;
+
     setAcceptedActions(prev => {
       const next = new Set(prev);
-      next.has(actionId) ? next.delete(actionId) : next.add(actionId);
+      const isAccepting = !next.has(actionId);
+      isAccepting ? next.add(actionId) : next.delete(actionId);
+
+      // Apply or revert the action's before→after replacement in the resume
+      if (action.before && action.after) {
+        setEditedResume(current => {
+          if (isAccepting) {
+            return current.includes(action.before)
+              ? current.replace(action.before, action.after)
+              : current;
+          } else {
+            return current.includes(action.after)
+              ? current.replace(action.after, action.before)
+              : current;
+          }
+        });
+      }
+
       return next;
     });
   };
