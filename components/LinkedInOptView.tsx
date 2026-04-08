@@ -39,7 +39,7 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-2xl font-bold text-white mb-2">LinkedIn 프로필 최적화</h2>
-          <p className="text-gray-400">채용 공고에 맞춘 LinkedIn 프로필을 생성합니다</p>
+          <p className="text-gray-400">이력서 기반으로 LinkedIn 프로필을 최적화합니다</p>
         </div>
         <button
           onClick={handleGenerate}
@@ -59,7 +59,7 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
       {!optimization && !loading && (
         <div className="text-center py-12 text-gray-400">
           <p className="text-lg mb-2">LinkedIn 프로필 최적화를 시작하세요</p>
-          <p className="text-sm">버튼을 클릭하여 채용 공고에 맞는 프로필을 생성합니다</p>
+          <p className="text-sm">버튼을 클릭하여 이력서 기반 프로필을 생성합니다</p>
         </div>
       )}
 

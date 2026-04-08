@@ -161,8 +161,8 @@ ${JSON.stringify(instruction, null, 2)}
  */
 export async function generateLinkedInOptimization(
   resumeText: string,
-  jobDescription: string,
-  instruction: TailoredInstructionWithRequirements
+  _jobDescription: string,
+  _instruction: TailoredInstructionWithRequirements
 ): Promise<LinkedInOptimization> {
   const prompt = `
 당신은 LinkedIn 프로필 최적화 전문가입니다.
@@ -171,33 +171,28 @@ export async function generateLinkedInOptimization(
 ## 이력서
 ${resumeText}
 
-## 채용 공고
-${jobDescription}
-
-## 맞춤형 가이드라인
-${JSON.stringify(instruction, null, 2)}
-
 # 요청사항
-다음을 생성하세요:
+이력서를 기반으로 범용 LinkedIn 프로필을 최적화하세요.
+특정 채용 공고에 맞추지 말고, 이 사람의 현재 역량과 경험을 가장 잘 드러내는 프로필을 만드세요.
 
 1. **Headline 최적화** (120자 이내)
    - 현재 직무 + 핵심 기술 스택
-   - 채용 공고 키워드 포함
-   - 검색 최적화
+   - LinkedIn 검색 최적화 (업계에서 많이 검색되는 키워드)
+   - 전문성이 한눈에 드러나도록
 
 2. **About 섹션 최적화** (2000자 이내)
    - 전문성과 경험 요약
    - 주요 성과와 임팩트
-   - 채용 공고와 정렬
-   - 개인적인 톤 유지
+   - 개인적이고 진정성 있는 톤 유지
+   - 커리어 비전 포함
 
 3. **Experience 하이라이트 최적화**
    - 각 주요 경험에 대한 최적화된 설명
    - 정량적 성과 강조
-   - 키워드 밀도 고려
+   - 업계 표준 키워드 활용
 
 4. **키워드 밀도 분석**
-   - 채용 공고의 핵심 키워드
+   - 이력서에서 추출한 핵심 기술/역량 키워드
    - 현재 프로필에서의 등장 횟수
    - 권장 등장 횟수
 
