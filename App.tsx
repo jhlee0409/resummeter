@@ -141,7 +141,7 @@ const App: React.FC = () => {
 
             {currentStep === AppStep.ANALYSIS && (
               <div className="animate-fade-in">
-                <AnalysisStep stage={analysisStage} />
+                <AnalysisStep stage={analysisStage} hasGithub={userData.githubRepos.some(r => r.url.trim() !== '')} />
               </div>
             )}
 

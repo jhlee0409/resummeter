@@ -18,10 +18,12 @@ const tips = [
 
 interface AnalysisStepProps {
   stage: 'jd-analysis' | 'resume-analysis' | 'coaching' | 'evidence-matching';
+  hasGithub?: boolean;
 }
 
-export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage }) => {
-  const currentStage = analysisStages.findIndex(s => s.key === stage);
+export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage, hasGithub = false }) => {
+  const visibleStages = hasGithub ? analysisStages : analysisStages.filter(s => s.key !== 'evidence-matching');
+  const currentStage = visibleStages.findIndex(s => s.key === stage);
   const [tipIndex, setTipIndex] = useState(0);
   const [tipFade, setTipFade] = useState(true);
 
@@ -36,7 +38,7 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage }) => {
     return () => clearInterval(tipInterval);
   }, []);
 
-  const progressPercent = Math.min(((currentStage + 1) / analysisStages.length) * 100, 100);
+  const progressPercent = Math.min(((currentStage + 1) / visibleStages.length) * 100, 100);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[600px] max-w-lg mx-auto px-4">
@@ -54,7 +56,7 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage }) => {
       </div>
 
       <h3 className="text-xl font-bold text-zinc-100 mb-1 text-center">AI가 이력서를 코칭하고 있어요</h3>
-      <p className="text-zinc-500 text-sm mb-8 text-center">JD와 GitHub 활동을 종합해 근거 기반 수정 제안을 생성합니다</p>
+      <p className="text-zinc-500 text-sm mb-8 text-center">{hasGithub ? 'JD와 GitHub 활동을 종합해 근거 기반 수정 제안을 생성합니다' : 'JD를 분석하여 근거 기반 수정 제안을 생성합니다'}</p>
 
       {/* Progress */}
       <div className="w-full mb-8">
@@ -73,7 +75,7 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage }) => {
 
       {/* Stages */}
       <div className="w-full space-y-1.5 mb-10">
-        {analysisStages.map((stage, idx) => {
+        {visibleStages.map((stage, idx) => {
           const isCompleted = idx < currentStage;
           const isCurrent = idx === currentStage;
           const isPending = idx > currentStage;
