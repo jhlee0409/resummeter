@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import * as Tabs from '@radix-ui/react-tabs';
+import * as Progress from '@radix-ui/react-progress';
 import { TailoredInstructionWithRequirements, InterviewQuestion, InterviewFeedback } from "../types";
 import { generateInterviewQuestions, evaluateAnswer } from "../services/interviewService";
 
@@ -161,12 +163,12 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
             <span className="text-sm text-slate-400">진행도</span>
             <span className="text-sm font-semibold text-blue-400">{completedCount}/{questions.length} 완료</span>
           </div>
-          <div className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden">
-            <div
+          <Progress.Root className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden" value={progressPercentage}>
+            <Progress.Indicator
               className="bg-gradient-to-r from-blue-500 to-purple-600 h-full transition-all duration-500"
               style={{ width: `${progressPercentage}%` }}
-            ></div>
-          </div>
+            />
+          </Progress.Root>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -176,28 +178,22 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
               <h2 className="text-lg font-bold mb-4 text-slate-200">질문 목록</h2>
 
               {/* Tab Buttons */}
-              <div className="flex gap-2 mb-4">
-                <button
-                  onClick={() => setActiveTab('technical')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all ${
-                    activeTab === 'technical'
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
-                  }`}
-                >
-                  기술면접 ({technicalQuestions.length})
-                </button>
-                <button
-                  onClick={() => setActiveTab('behavioral')}
-                  className={`flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all ${
-                    activeTab === 'behavioral'
-                      ? 'bg-purple-500 text-white'
-                      : 'bg-slate-700/50 text-slate-400 hover:bg-slate-700'
-                  }`}
-                >
-                  인성면접 ({behavioralQuestions.length})
-                </button>
-              </div>
+              <Tabs.Root value={activeTab} onValueChange={(v) => setActiveTab(v as 'technical' | 'behavioral')}>
+                <Tabs.List className="flex gap-2 mb-4">
+                  <Tabs.Trigger
+                    value="technical"
+                    className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:bg-slate-700/50 data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:bg-slate-700"
+                  >
+                    기술면접 ({technicalQuestions.length})
+                  </Tabs.Trigger>
+                  <Tabs.Trigger
+                    value="behavioral"
+                    className="flex-1 py-2 px-4 rounded-lg text-sm font-semibold transition-all data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=inactive]:bg-slate-700/50 data-[state=inactive]:text-slate-400 data-[state=inactive]:hover:bg-slate-700"
+                  >
+                    인성면접 ({behavioralQuestions.length})
+                  </Tabs.Trigger>
+                </Tabs.List>
+              </Tabs.Root>
 
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {displayQuestions.map((q, idx) => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import * as Progress from '@radix-ui/react-progress';
 
 const analysisStages = [
   { key: 'jd-analysis', label: "채용 공고 분석 중", detail: "JD에서 핵심 요구사항과 기술 스택 추출", icon: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" },
@@ -64,13 +65,13 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage, hasGithub = f
           <span className="text-[11px] font-semibold text-zinc-500">진행률</span>
           <span className="text-[11px] font-bold text-brand-400 section-num">{Math.round(progressPercent)}%</span>
         </div>
-        <div className="relative h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-          <div
+        <Progress.Root className="relative h-1.5 bg-zinc-800 rounded-full overflow-hidden" value={progressPercent}>
+          <Progress.Indicator
             className="h-full bg-gradient-to-r from-brand-400 to-brand-600 rounded-full transition-all duration-1000 ease-out"
             style={{ width: `${progressPercent}%` }}
           />
           <div className="absolute inset-0 overflow-hidden rounded-full"><div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer-bar" /></div>
-        </div>
+        </Progress.Root>
       </div>
 
       {/* Stages */}
