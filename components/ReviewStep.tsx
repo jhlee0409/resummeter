@@ -177,9 +177,62 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     );
   }, [result.actionItems]);
 
+  const hasGithubRepos = originalData.githubRepos.some(r => r.url.trim() !== '');
+
+  const tabGroups: Array<{ key: string; label: string; tabs: Array<{ key: ReviewTab; label: string; icon: string }> }> = [
+    { key: 'core', label: '핵심 분석', tabs: [
+      { key: 'gap-map', label: 'Gap Map', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+      { key: 'actions', label: '코칭 제안', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+      { key: 'resume', label: '이력서', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
+      { key: 'ats-score', label: 'ATS', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
+      { key: 'detailed-score', label: '상세 점수', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+    ]},
+    { key: 'application', label: '지원서 작성', tabs: [
+      { key: 'narrative', label: '서술형', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
+      { key: 'career-statement', label: '경력기술서', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
+      { key: 'cover-letter', label: '커버레터', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+    ]},
+    { key: 'interview', label: '면접 준비', tabs: [
+      { key: 'interview', label: '모의면접', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
+      { key: 'skill-gap', label: '학습 경로', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
+    ]},
+    { key: 'branding', label: '개인 브랜딩', tabs: [
+      { key: 'linkedin', label: 'LinkedIn', icon: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2V9zm2-2a2 2 0 110-4 2 2 0 010 4z' },
+      { key: 'about-statement', label: '한줄소개', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+    ]},
+    { key: 'utilities', label: '부가 기능', tabs: [
+      ...(hasGithubRepos ? [{ key: 'evidence' as ReviewTab, label: 'GitHub 근거', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' }] : []),
+      { key: 'versions', label: '버전 관리', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+    ]},
+  ];
+
+  const [activeGroup, setActiveGroup] = useState<string>('core');
+
+  const tabToGroup = useMemo(() => {
+    const map: Record<string, string> = {};
+    tabGroups.forEach(g => g.tabs.forEach(t => { map[t.key] = g.key; }));
+    return map;
+  }, [hasGithubRepos]);
+
+  const currentGroupTabs = tabGroups.find(g => g.key === activeGroup)?.tabs ?? [];
+
+  const switchTab = (tab: ReviewTab) => {
+    setActiveTab(tab);
+    const group = tabToGroup[tab];
+    if (group) setActiveGroup(group);
+  };
+
+  const switchGroup = (groupKey: string) => {
+    setActiveGroup(groupKey);
+    const group = tabGroups.find(g => g.key === groupKey);
+    if (group && group.tabs.length > 0 && !group.tabs.some(t => t.key === activeTab)) {
+      setActiveTab(group.tabs[0].key);
+    }
+  };
+
   const handleActionClick = (requirement: string) => {
     setHighlightedGap(requirement);
-    setActiveTab('actions');
+    switchTab('actions');
   };
 
   const isActionHighlighted = (item: typeof result.actionItems[number]) => {
@@ -192,23 +245,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       item.evidence.some(e => e.content.toLowerCase().includes(gap))
     );
   };
-
-  const tabs: Array<{ key: ReviewTab; label: string; icon: string }> = [
-    { key: 'gap-map', label: 'Gap Map', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
-    { key: 'actions', label: '코칭 제안', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-    ...(originalData.githubRepos.some(r => r.url.trim() !== '') ? [{ key: 'evidence' as ReviewTab, label: 'GitHub 근거', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' }] : []),
-    { key: 'resume', label: '이력서', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
-    { key: 'narrative', label: '서술형', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
-    { key: 'ats-score', label: 'ATS', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { key: 'detailed-score', label: '상세 점수', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-    { key: 'career-statement', label: '경력기술서', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-    { key: 'cover-letter', label: '커버레터', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
-    { key: 'interview', label: '모의면접', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z' },
-    { key: 'skill-gap', label: '학습 경로', icon: 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253' },
-    { key: 'linkedin', label: 'LinkedIn', icon: 'M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-4 0v7h-4v-7a6 6 0 016-6zM2 9h4v12H2V9zm2-2a2 2 0 110-4 2 2 0 010 4z' },
-    { key: 'versions', label: '버전 관리', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-    { key: 'about-statement', label: '한줄소개', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
-  ];
 
   return (
     <div className="max-w-6xl mx-auto space-y-5 pb-10">
@@ -223,13 +259,30 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       {/* Score Dashboard */}
       <ScoreDashboard result={result} originalData={originalData} editedResume={editedResume} />
 
-      {/* Tab Bar */}
+      {/* Tab Bar — 2-level navigation */}
       <div className="glass-card rounded-2xl overflow-hidden">
+        {/* Row 1: Group Pills */}
+        <div className="flex items-center gap-1 px-3 py-2 border-b border-white/[0.04] overflow-x-auto custom-scrollbar">
+          {tabGroups.map((group) => (
+            <button
+              key={group.key}
+              onClick={() => switchGroup(group.key)}
+              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+                activeGroup === group.key
+                  ? 'bg-brand-500/15 text-brand-300 border border-brand-500/20'
+                  : 'text-zinc-500 hover:text-zinc-400 hover:bg-white/[0.03] border border-transparent'
+              }`}
+            >
+              {group.label}
+            </button>
+          ))}
+        </div>
+        {/* Row 2: Tabs within selected group */}
         <div className="flex border-b border-white/[0.06] overflow-x-auto custom-scrollbar">
-          {tabs.map((tab) => (
+          {currentGroupTabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => { setActiveTab(tab.key); if (tab.key !== 'actions') setHighlightedGap(null); }}
+              onClick={() => { switchTab(tab.key); if (tab.key !== 'actions') setHighlightedGap(null); }}
               className={`flex items-center justify-center gap-1.5 px-3 py-3 text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === tab.key
                   ? 'text-brand-400 border-b-2 border-brand-400 bg-brand-500/10'
