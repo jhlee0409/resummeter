@@ -20,7 +20,7 @@ const SECTION_TYPE_LABELS: Record<NarrativeSectionType, string> = {
   'technical-skills': '보유기술',
   'motivation': '지원동기',
   'growth-plan': '성장계획',
-  'custom': '직접입력',
+  'custom': '기타 (직접입력)',
 };
 
 const CHAR_LIMIT_OPTIONS = [500, 800, 1000, 1500, 2000];
@@ -299,15 +299,24 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
             sideOffset={8}
             className="w-[var(--radix-dropdown-menu-trigger-width)] bg-zinc-900 border border-white/20 rounded-xl shadow-xl shadow-black/50 overflow-hidden z-50"
           >
-            {(Object.entries(SECTION_TYPE_LABELS) as Array<[NarrativeSectionType, string]>).map(([type, label]) => (
+            {(Object.entries(SECTION_TYPE_LABELS) as Array<[NarrativeSectionType, string]>)
+              .filter(([type]) => type !== 'custom')
+              .map(([type, label]) => (
               <DropdownMenu.Item
                 key={type}
                 onSelect={() => handleAddSection(type)}
-                className="px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors border-b border-white/5 last:border-0 cursor-pointer outline-none data-[highlighted]:bg-white/10 data-[highlighted]:text-white"
+                className="px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors border-b border-white/5 cursor-pointer outline-none data-[highlighted]:bg-white/10 data-[highlighted]:text-white"
               >
                 {label}
               </DropdownMenu.Item>
             ))}
+            <DropdownMenu.Separator className="h-px bg-white/10 my-1" />
+            <DropdownMenu.Item
+              onSelect={() => handleAddSection('custom')}
+              className="px-4 py-2.5 text-sm text-white/50 hover:bg-white/10 hover:text-white transition-colors cursor-pointer outline-none data-[highlighted]:bg-white/10 data-[highlighted]:text-white italic"
+            >
+              기타 (직접입력)
+            </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
