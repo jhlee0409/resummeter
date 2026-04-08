@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import * as Collapsible from '@radix-ui/react-collapsible';
 import { TailoredInstructionWithRequirements, GitHubFetchResult, CareerStatementResult } from '../types';
 import { generateCareerStatements } from '../services/careerDocService';
 
@@ -41,18 +42,6 @@ export function CareerStatementView({
     } finally {
       setLoading(false);
     }
-  };
-
-  const toggleExpand = (id: string) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -128,17 +117,27 @@ export function CareerStatementView({
           </div>
 
           {/* Statement Cards */}
-          {result.statements.map((statement) => {
-            const isExpanded = expandedIds.has(statement.id);
-            return (
-              <div
-                key={statement.id}
-                className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
-              >
-                {/* Header */}
+          {result.statements.map((statement) => (
+            <Collapsible.Root
+              key={statement.id}
+              open={expandedIds.has(statement.id)}
+              onOpenChange={(open) => {
+                setExpandedIds(prev => {
+                  const next = new Set(prev);
+                  if (open) {
+                    next.add(statement.id);
+                  } else {
+                    next.delete(statement.id);
+                  }
+                  return next;
+                });
+              }}
+              className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow"
+            >
+              {/* Header */}
+              <Collapsible.Trigger asChild>
                 <div
                   className="p-6 cursor-pointer hover:bg-slate-700/30 transition-colors"
-                  onClick={() => toggleExpand(statement.id)}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
@@ -165,7 +164,7 @@ export function CareerStatementView({
                         복사
                       </button>
                       <svg
-                        className={`w-6 h-6 text-slate-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                        className="w-6 h-6 text-slate-400 transition-transform data-[state=open]:rotate-180"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -175,59 +174,57 @@ export function CareerStatementView({
                     </div>
                   </div>
                 </div>
+              </Collapsible.Trigger>
 
-                {/* Expanded Content */}
-                {isExpanded && (
-                  <div className="border-t border-slate-700/50 bg-slate-900/30">
-                    {/* Full Content */}
-                    <div className="p-6 border-b border-slate-700/50">
-                      <h4 className="text-sm font-semibold text-slate-400 mb-2">전체 내용</h4>
-                      <p className="text-white leading-relaxed whitespace-pre-wrap">{statement.content}</p>
+              {/* Expanded Content */}
+              <Collapsible.Content className="border-t border-slate-700/50 bg-slate-900/30">
+                {/* Full Content */}
+                <div className="p-6 border-b border-slate-700/50">
+                  <h4 className="text-sm font-semibold text-slate-400 mb-2">전체 내용</h4>
+                  <p className="text-white leading-relaxed whitespace-pre-wrap">{statement.content}</p>
+                </div>
+
+                {/* STAR Breakdown */}
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-3">
+                    <div>
+                      <h5 className="text-xs font-semibold text-blue-400 mb-1">S - 상황 (Situation)</h5>
+                      <p className="text-sm text-slate-300">{statement.starBreakdown.situation}</p>
                     </div>
-
-                    {/* STAR Breakdown */}
-                    <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <div>
-                          <h5 className="text-xs font-semibold text-blue-400 mb-1">S - 상황 (Situation)</h5>
-                          <p className="text-sm text-slate-300">{statement.starBreakdown.situation}</p>
-                        </div>
-                        <div>
-                          <h5 className="text-xs font-semibold text-green-400 mb-1">T - 과제 (Task)</h5>
-                          <p className="text-sm text-slate-300">{statement.starBreakdown.task}</p>
-                        </div>
-                      </div>
-                      <div className="space-y-3">
-                        <div>
-                          <h5 className="text-xs font-semibold text-purple-400 mb-1">A - 행동 (Action)</h5>
-                          <p className="text-sm text-slate-300">{statement.starBreakdown.action}</p>
-                        </div>
-                        <div>
-                          <h5 className="text-xs font-semibold text-orange-400 mb-1">R - 결과 (Result)</h5>
-                          <p className="text-sm text-slate-300">{statement.starBreakdown.result}</p>
-                        </div>
-                      </div>
+                    <div>
+                      <h5 className="text-xs font-semibold text-green-400 mb-1">T - 과제 (Task)</h5>
+                      <p className="text-sm text-slate-300">{statement.starBreakdown.task}</p>
                     </div>
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <h5 className="text-xs font-semibold text-purple-400 mb-1">A - 행동 (Action)</h5>
+                      <p className="text-sm text-slate-300">{statement.starBreakdown.action}</p>
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-semibold text-orange-400 mb-1">R - 결과 (Result)</h5>
+                      <p className="text-sm text-slate-300">{statement.starBreakdown.result}</p>
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Quantified Results */}
-                    {statement.quantifiedResults.length > 0 && (
-                      <div className="p-6 border-t border-slate-700/50 bg-gradient-to-br from-orange-900/10 to-red-900/10">
-                        <h4 className="text-sm font-semibold text-orange-400 mb-3">정량적 성과</h4>
-                        <ul className="space-y-2">
-                          {statement.quantifiedResults.map((result, idx) => (
-                            <li key={idx} className="flex items-start gap-2 text-sm text-white">
-                              <span className="text-orange-400 mt-1">📊</span>
-                              <span>{result}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                {/* Quantified Results */}
+                {statement.quantifiedResults.length > 0 && (
+                  <div className="p-6 border-t border-slate-700/50 bg-gradient-to-br from-orange-900/10 to-red-900/10">
+                    <h4 className="text-sm font-semibold text-orange-400 mb-3">정량적 성과</h4>
+                    <ul className="space-y-2">
+                      {statement.quantifiedResults.map((qr, idx) => (
+                        <li key={idx} className="flex items-start gap-2 text-sm text-white">
+                          <span className="text-orange-400 mt-1">📊</span>
+                          <span>{qr}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
-              </div>
-            );
-          })}
+              </Collapsible.Content>
+            </Collapsible.Root>
+          ))}
         </div>
       )}
     </div>

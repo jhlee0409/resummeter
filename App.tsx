@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { Toaster } from 'sonner';
 import { Stepper } from './components/Stepper';
 import { UploadStep } from './components/UploadStep';
 import { AnalysisStep } from './components/AnalysisStep';
@@ -159,6 +160,7 @@ const App: React.FC = () => {
         </div>
       </main>
 
+      <Toaster theme="dark" position="bottom-right" />
       <footer className="border-t border-white/[0.06] py-5 mt-auto">
         <div className="max-w-6xl mx-auto px-5 text-center text-zinc-600 text-[11px] tracking-wide">
           &copy; {new Date().getFullYear()} Resummeter &middot; Powered by Google Gemini

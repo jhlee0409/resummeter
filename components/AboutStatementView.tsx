@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import {
   TailoredInstructionWithRequirements,
   CoachingResult,
@@ -42,8 +43,6 @@ export function AboutStatementView({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AboutStatementResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [copiedVersion, setCopiedVersion] = useState<string | null>(null);
-
   const handleGenerate = async () => {
     if (!inputStatement.trim()) {
       setError('자기소개 문장을 입력해주세요.');
@@ -71,8 +70,7 @@ export function AboutStatementView({
 
   const copyToClipboard = async (version: AboutStatementVersion) => {
     await navigator.clipboard.writeText(version.content);
-    setCopiedVersion(version.id);
-    setTimeout(() => setCopiedVersion(null), 2000);
+    toast.success('복사되었습니다');
   };
 
   const isRecommended = (versionId: string): boolean => {
@@ -229,13 +227,9 @@ export function AboutStatementView({
                   {/* Copy Button */}
                   <button
                     onClick={() => copyToClipboard(version)}
-                    className={`w-full px-4 py-2 rounded-lg font-medium transition-all ${
-                      copiedVersion === version.id
-                        ? 'bg-green-600 text-white'
-                        : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                    }`}
+                    className="w-full px-4 py-2 rounded-lg font-medium transition-all bg-slate-700 text-slate-300 hover:bg-slate-600"
                   >
-                    {copiedVersion === version.id ? '복사됨!' : '복사하기'}
+                    복사하기
                   </button>
                 </div>
               );

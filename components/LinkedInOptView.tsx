@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { toast } from "sonner";
 import type { TailoredInstructionWithRequirements, LinkedInOptimization } from "../types";
 import { generateLinkedInOptimization } from "../services/skillGapService";
 
@@ -12,8 +13,6 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
   const [optimization, setOptimization] = useState<LinkedInOptimization | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copiedSection, setCopiedSection] = useState<string | null>(null);
-
   const handleGenerate = async () => {
     setLoading(true);
     setError(null);
@@ -28,10 +27,9 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
     }
   };
 
-  const handleCopy = (text: string, section: string) => {
+  const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    setCopiedSection(section);
-    setTimeout(() => setCopiedSection(null), 2000);
+    toast.success("복사되었습니다");
   };
 
   return (
@@ -70,10 +68,10 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-white">Headline</h3>
               <button
-                onClick={() => handleCopy(optimization.headline, "headline")}
+                onClick={() => handleCopy(optimization.headline)}
                 className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
               >
-                {copiedSection === "headline" ? "복사됨!" : "복사"}
+                복사
               </button>
             </div>
             <div className="bg-gray-900/50 rounded p-4 border border-gray-700">
@@ -89,10 +87,10 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-lg font-semibold text-white">About</h3>
               <button
-                onClick={() => handleCopy(optimization.about, "about")}
+                onClick={() => handleCopy(optimization.about)}
                 className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
               >
-                {copiedSection === "about" ? "복사됨!" : "복사"}
+                복사
               </button>
             </div>
             <div className="bg-gray-900/50 rounded p-4 border border-gray-700">
@@ -113,10 +111,10 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-semibold text-white">{exp.role}</h4>
                       <button
-                        onClick={() => handleCopy(exp.optimizedDescription, `exp-${index}`)}
+                        onClick={() => handleCopy(exp.optimizedDescription)}
                         className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white text-sm rounded transition-colors"
                       >
-                        {copiedSection === `exp-${index}` ? "복사됨!" : "복사"}
+                        복사
                       </button>
                     </div>
                     <p className="text-gray-300 text-sm whitespace-pre-wrap">{exp.optimizedDescription}</p>

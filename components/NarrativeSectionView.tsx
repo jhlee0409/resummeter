@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { NarrativeSectionResult } from '../types';
 
 interface NarrativeSectionViewProps {
@@ -27,8 +28,6 @@ const techNarrativeLabels = {
 };
 
 export const NarrativeSectionView: React.FC<NarrativeSectionViewProps> = ({ sections }) => {
-  const [copiedAll, setCopiedAll] = useState(false);
-
   const handleCopyAll = async () => {
     const allText = sections
       .filter(s => s.status === 'success')
@@ -37,8 +36,7 @@ export const NarrativeSectionView: React.FC<NarrativeSectionViewProps> = ({ sect
 
     try {
       await navigator.clipboard.writeText(allText);
-      setCopiedAll(true);
-      setTimeout(() => setCopiedAll(false), 2000);
+      toast.success('복사되었습니다');
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -53,21 +51,10 @@ export const NarrativeSectionView: React.FC<NarrativeSectionViewProps> = ({ sect
           onClick={handleCopyAll}
           className="px-4 py-2 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-400 hover:bg-brand-500/20 transition-all text-sm font-medium flex items-center gap-2"
         >
-          {copiedAll ? (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-              복사됨
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              전체 복사
-            </>
-          )}
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          전체 복사
         </button>
       </div>
 
@@ -86,8 +73,6 @@ const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult }> = ({ s
   const [breakdownExpanded, setBreakdownExpanded] = useState(false);
   const [editedContent, setEditedContent] = useState(section.content);
   const [currentCharCount, setCurrentCharCount] = useState(section.charCount);
-  const [copied, setCopied] = useState(false);
-
   const fConfig = frameworkConfig[section.framework];
   const isOverLimit = currentCharCount > section.charLimit;
 
@@ -99,8 +84,7 @@ const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult }> = ({ s
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(editedContent);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      toast.success('복사되었습니다');
     } catch (err) {
       console.error('Failed to copy:', err);
     }
@@ -139,21 +123,10 @@ const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult }> = ({ s
                 onClick={handleCopy}
                 className="px-3 py-1.5 rounded-lg bg-zinc-800/50 border border-white/10 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all text-xs font-medium flex items-center gap-1.5"
               >
-                {copied ? (
-                  <>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                    복사됨
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    복사
-                  </>
-                )}
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                복사
               </button>
             )}
             <button

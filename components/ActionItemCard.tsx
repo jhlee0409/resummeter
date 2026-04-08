@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
+import * as Collapsible from '@radix-ui/react-collapsible';
 import { ActionItem } from '../types';
 
 interface ActionItemCardProps {
@@ -30,63 +31,60 @@ const evidenceTypeLabels: Record<string, { label: string; bg: string; text: stri
 };
 
 export const ActionItemCard: React.FC<ActionItemCardProps> = ({ item, accepted, onToggle, highlighted }) => {
-  const [expanded, setExpanded] = useState(false);
   const pConfig = priorityConfig[item.priority] || priorityConfig.medium;
 
   return (
-    <div
-      id={`action-${item.id}`}
-      className={`glass-card rounded-xl transition-all duration-200 overflow-hidden ${
-        accepted ? 'border-emerald-500/20 bg-emerald-500/5' : highlighted ? 'border-brand-500/30 bg-brand-500/5 ring-1 ring-brand-500/20' : ''
-      }`}
-    >
-      <div className="px-4 py-3.5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${pConfig.bg} ${pConfig.text} border ${pConfig.border}`}>
-              {pConfig.label}
-            </span>
-            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-800/50 text-zinc-500 font-medium">
-              {categoryLabels[item.category] || item.category}
-            </span>
-            <span className="text-[10px] text-zinc-600">{item.targetSection}</span>
+    <Collapsible.Root asChild>
+      <div
+        id={`action-${item.id}`}
+        className={`glass-card rounded-xl transition-all duration-200 overflow-hidden ${
+          accepted ? 'border-emerald-500/20 bg-emerald-500/5' : highlighted ? 'border-brand-500/30 bg-brand-500/5 ring-1 ring-brand-500/20' : ''
+        }`}
+      >
+        <div className="px-4 py-3.5">
+          {/* Header */}
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-semibold ${pConfig.bg} ${pConfig.text} border ${pConfig.border}`}>
+                {pConfig.label}
+              </span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-800/50 text-zinc-500 font-medium">
+                {categoryLabels[item.category] || item.category}
+              </span>
+              <span className="text-[10px] text-zinc-600">{item.targetSection}</span>
+            </div>
+            <button
+              onClick={onToggle}
+              className={`shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                accepted
+                  ? 'bg-emerald-500 border-emerald-500 text-white'
+                  : 'border-zinc-600 hover:border-brand-400'
+              }`}
+            >
+              {accepted && (
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+            </button>
           </div>
-          <button
-            onClick={onToggle}
-            className={`shrink-0 w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-              accepted
-                ? 'bg-emerald-500 border-emerald-500 text-white'
-                : 'border-zinc-600 hover:border-brand-400'
-            }`}
-          >
-            {accepted && (
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={3}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-          </button>
-        </div>
 
-        {/* Suggestion */}
-        <p className="text-[13px] font-semibold text-zinc-300 leading-snug mb-2">{item.suggestion}</p>
+          {/* Suggestion */}
+          <p className="text-[13px] font-semibold text-zinc-300 leading-snug mb-2">{item.suggestion}</p>
 
-        {/* Before/After toggle */}
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="text-[11px] text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors"
-        >
-          {expanded ? '접기' : '상세 보기 (원문 → 수정안)'}
-          <svg
-            className={`w-3 h-3 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-            fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
-        </button>
+          {/* Before/After toggle */}
+          <Collapsible.Trigger className="text-[11px] text-brand-400 hover:text-brand-300 font-medium flex items-center gap-1 transition-colors group">
+            <span className="group-data-[state=open]:hidden">상세 보기 (원문 → 수정안)</span>
+            <span className="hidden group-data-[state=open]:inline">접기</span>
+            <svg
+              className="w-3 h-3 transition-transform duration-200 group-data-[state=open]:rotate-180"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+          </Collapsible.Trigger>
 
-        {expanded && (
-          <div className="mt-3 space-y-3 animate-fade-in">
+          <Collapsible.Content className="mt-3 space-y-3 animate-fade-in data-[state=closed]:animate-none">
             {/* Before */}
             <div className="bg-red-500/5 rounded-lg px-3 py-2.5 border border-red-500/15">
               <p className="text-[10px] font-semibold text-red-400/70 mb-1">원문 (Before)</p>
@@ -118,9 +116,9 @@ export const ActionItemCard: React.FC<ActionItemCardProps> = ({ item, accepted, 
                 })}
               </div>
             )}
-          </div>
-        )}
+          </Collapsible.Content>
+        </div>
       </div>
-    </div>
+    </Collapsible.Root>
   );
 };

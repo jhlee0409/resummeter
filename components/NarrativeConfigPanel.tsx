@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import * as Select from '@radix-ui/react-select';
+import * as Collapsible from '@radix-ui/react-collapsible';
 import { NarrativeSectionSpec, NarrativeFramework, NarrativeSectionType } from '../types';
 
 interface NarrativeConfigPanelProps {
@@ -207,29 +209,44 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
 
                 <div className="flex items-center gap-3">
                   <label className="text-xs text-white/60 shrink-0">글자 수 제한</label>
-                  <select
-                    value={spec.charLimit}
-                    onChange={(e) => handleUpdateSpec(spec.id, { charLimit: Number(e.target.value) })}
+                  <Select.Root
+                    value={String(spec.charLimit)}
+                    onValueChange={(val) => handleUpdateSpec(spec.id, { charLimit: Number(val) })}
                     disabled={isGenerating}
-                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 disabled:opacity-50 cursor-pointer"
                   >
-                    {CHAR_LIMIT_OPTIONS.map((limit) => (
-                      <option key={limit} value={limit}>
-                        {limit}자
-                      </option>
-                    ))}
-                  </select>
+                    <Select.Trigger className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500/50 disabled:opacity-50 cursor-pointer">
+                      <Select.Value />
+                      <Select.Icon>
+                        <svg className="w-3 h-3 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </Select.Icon>
+                    </Select.Trigger>
+                    <Select.Portal>
+                      <Select.Content className="bg-zinc-900 border border-white/20 rounded-xl shadow-xl shadow-black/50 overflow-hidden z-50" position="popper" sideOffset={4}>
+                        <Select.Viewport>
+                          {CHAR_LIMIT_OPTIONS.map((limit) => (
+                            <Select.Item
+                              key={limit}
+                              value={String(limit)}
+                              className="px-3 py-2 text-xs text-white/80 hover:bg-white/10 hover:text-white cursor-pointer outline-none data-[highlighted]:bg-white/10 data-[highlighted]:text-white"
+                            >
+                              <Select.ItemText>{limit}자</Select.ItemText>
+                            </Select.Item>
+                          ))}
+                        </Select.Viewport>
+                      </Select.Content>
+                    </Select.Portal>
+                  </Select.Root>
                 </div>
 
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => togglePromptExpanded(spec.id)}
+                <Collapsible.Root open={expandedPrompts.has(spec.id)} onOpenChange={() => togglePromptExpanded(spec.id)}>
+                  <Collapsible.Trigger
                     disabled={isGenerating}
-                    className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/70 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/70 transition-colors disabled:opacity-50 group"
                   >
                     <svg
-                      className={`w-3 h-3 transition-transform ${expandedPrompts.has(spec.id) ? 'rotate-90' : ''}`}
+                      className="w-3 h-3 transition-transform group-data-[state=open]:rotate-90"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -238,12 +255,8 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                     방향성 힌트 (선택사항)
-                  </button>
-                  <div
-                    className={`overflow-hidden transition-all duration-200 ${
-                      expandedPrompts.has(spec.id) ? 'max-h-32 mt-2' : 'max-h-0'
-                    }`}
-                  >
+                  </Collapsible.Trigger>
+                  <Collapsible.Content className="mt-2">
                     <textarea
                       value={spec.prompt || ''}
                       onChange={(e) => handleUpdateSpec(spec.id, { prompt: e.target.value })}
@@ -252,8 +265,8 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 resize-none disabled:opacity-50"
                       rows={3}
                     />
-                  </div>
-                </div>
+                  </Collapsible.Content>
+                </Collapsible.Root>
               </div>
             ))}
           </div>
