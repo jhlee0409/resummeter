@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useState } from 'react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { NarrativeSectionSpec, NarrativeFramework, NarrativeSectionType } from '../types';
 
 interface NarrativeConfigPanelProps {
@@ -35,42 +35,6 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
   progress,
 }) => {
   const [expandedPrompts, setExpandedPrompts] = useState<Set<string>>(new Set());
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const addBtnRef = useRef<HTMLButtonElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number }>({ top: 0, left: 0, width: 0 });
-
-  // Calculate dropdown position when it opens
-  useEffect(() => {
-    if (!dropdownOpen) return;
-    const rect = addBtnRef.current?.getBoundingClientRect();
-    if (rect) {
-      setDropdownPos({ top: rect.bottom + 8, left: rect.left, width: rect.width });
-    }
-  }, [dropdownOpen]);
-
-  // Handle click outside to close dropdown
-  useEffect(() => {
-    if (!dropdownOpen) return;
-
-    let removeListener: (() => void) | null = null;
-
-    // Use setTimeout to avoid the click event that just opened the dropdown
-    const timeoutId = setTimeout(() => {
-      const handleClickOutside = (e: MouseEvent) => {
-        if (!dropdownRef.current?.contains(e.target as Node) && !addBtnRef.current?.contains(e.target as Node)) {
-          setDropdownOpen(false);
-        }
-      };
-      document.addEventListener('click', handleClickOutside);
-      removeListener = () => document.removeEventListener('click', handleClickOutside);
-    }, 10);
-
-    return () => {
-      clearTimeout(timeoutId);
-      removeListener?.();
-    };
-  }, [dropdownOpen]);
 
   const togglePromptExpanded = (specId: string) => {
     setExpandedPrompts((prev) => {
@@ -297,21 +261,15 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
       )}
 
       {/* Add Section */}
-      <div>
-        <div className="relative">
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild disabled={!canAddSection || isGenerating}>
           <button
-            ref={addBtnRef}
             type="button"
-            disabled={!canAddSection || isGenerating}
             className={`w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-xl transition-all ${
               canAddSection && !isGenerating
                 ? 'border-white/20 hover:border-blue-500/50 hover:bg-blue-500/5 text-white/60 hover:text-blue-400 cursor-pointer'
                 : 'border-white/10 text-white/30 cursor-not-allowed'
             }`}
-            onClick={() => {
-              if (!canAddSection) return;
-              setDropdownOpen((v) => !v);
-            }}
             title={!canAddSection ? `최대 ${MAX_SECTIONS}개까지 추가 가능` : '항목 추가'}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
@@ -322,32 +280,24 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
               <span className="ml-2 text-xs text-amber-400/70">(최대 {MAX_SECTIONS}개)</span>
             )}
           </button>
-
-          {/* Dropdown - portal to body to escape overflow:hidden parents */}
-          {dropdownOpen && createPortal(
-            <div
-              ref={dropdownRef}
-              style={{ position: 'fixed', top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
-              className="bg-zinc-900 border border-white/20 rounded-xl shadow-xl shadow-black/50 overflow-hidden"
-            >
-              {(Object.entries(SECTION_TYPE_LABELS) as Array<[NarrativeSectionType, string]>).map(([type, label]) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => {
-                    handleAddSection(type);
-                    setDropdownOpen(false);
-                  }}
-                  className="w-full px-4 py-2.5 text-left text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors border-b border-white/5 last:border-0"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>,
-            document.body
-          )}
-        </div>
-      </div>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            sideOffset={8}
+            className="w-[var(--radix-dropdown-menu-trigger-width)] bg-zinc-900 border border-white/20 rounded-xl shadow-xl shadow-black/50 overflow-hidden z-50"
+          >
+            {(Object.entries(SECTION_TYPE_LABELS) as Array<[NarrativeSectionType, string]>).map(([type, label]) => (
+              <DropdownMenu.Item
+                key={type}
+                onSelect={() => handleAddSection(type)}
+                className="px-4 py-2.5 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors border-b border-white/5 last:border-0 cursor-pointer outline-none data-[highlighted]:bg-white/10 data-[highlighted]:text-white"
+              >
+                {label}
+              </DropdownMenu.Item>
+            ))}
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
 
       {/* Generate Button */}
       <div className="pt-2">
