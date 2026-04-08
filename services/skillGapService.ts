@@ -43,6 +43,9 @@ export async function analyzeLearningRoadmap(
 - 추론 금지: 이력서에 명시적으로 기재된 사실만 활용하십시오. "~했을 것이다", "~경험이 있을 수 있다"는 절대 금지입니다.
 - 기타 이력이라도 정량적 성과나 명확한 임팩트가 있으면 적극 활용하십시오.
 
+[Grounding 규칙]
+제공된 스킬 갭 분석과 JD만 사용하십시오. 외부 지식이나 일반 상식으로 추론하지 마십시오.
+
 # 입력 정보
 ## 채용 공고
 ${jobDescription}
@@ -187,6 +190,16 @@ ${resumeText}
 - 추론 금지: 이력서에 명시적으로 기재된 사실만 활용하십시오. "~했을 것이다", "~경험이 있을 수 있다"는 절대 금지입니다.
 - 기타 이력이라도 정량적 성과나 명확한 임팩트가 있으면 적극 활용하십시오.
 
+[Grounding 규칙]
+제공된 이력서만 사용하십시오. 이력서에 없는 경험이나 기술을 프로필에 포함하지 마십시오.
+확인할 수 없는 정보는 절대 포함하지 마십시오.
+
+[AI 탐지 회피]
+- 과도한 열정 표현 금지 ("열정적으로", "끊임없이 노력하는")
+- 추상적 미사여구 금지 ("다양한 경험을 통해 성장한")
+- LinkedIn 특유의 과장 표현 금지 ("thought leader", "visionary")
+- 구체적 사실과 수치로 전문성을 드러내십시오
+
 # 요청사항
 이력서를 기반으로 범용 LinkedIn 프로필을 최적화하세요.
 특정 채용 공고에 맞추지 말고, 이 사람의 현재 역량과 경험을 가장 잘 드러내는 프로필을 만드세요.
@@ -251,7 +264,6 @@ ${resumeText}
     model: "gemini-3-pro-preview",
     contents: prompt,
     config: {
-      temperature: 0.5,
       responseMimeType: "application/json",
       responseSchema: linkedInSchema,
     },

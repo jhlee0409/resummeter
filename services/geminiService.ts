@@ -71,6 +71,10 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
     당신은 세계 최고의 프롬프트 엔지니어이자 채용 컨설턴트입니다.
     아래의 [채용 공고(JD)]를 심층 분석하여, 이 포지션의 지원자를 평가할 **'AI 면접관의 페르소나'**와 **'이력서 최적화 가이드라인'**을 작성해주세요.
 
+    [Grounding 규칙]
+    제공된 이력서, JD, GitHub 데이터만 사용하십시오. 외부 지식이나 일반 상식으로 추론하지 마십시오.
+    확인할 수 없는 정보는 "[확인 필요]"로 표시하십시오.
+
     [목표 채용 공고]
     ${jobDescription}
 
@@ -213,6 +217,10 @@ async function analyzeResume(
 [현재 날짜]
 ${today} — 이 날짜 기준으로 과거/현재/미래를 판단하십시오.
 
+[Grounding 규칙]
+제공된 이력서, JD, GitHub 데이터만 사용하십시오. 외부 지식이나 일반 상식으로 추론하지 마십시오.
+확인할 수 없는 정보는 "[확인 필요]"로 표시하십시오.
+
 [핵심 원칙 — 모든 분석의 기초]
 원칙 1: 이력서 원문에 명시된 내용만 분석 대상입니다.
 원칙 2: 이력서에 없는 기술/경험/성과는 존재하지 않는 것으로 취급합니다.
@@ -330,6 +338,10 @@ async function generateCoaching(
 [현재 날짜]
 ${today} — 이 날짜 기준으로 과거/현재/미래를 판단하십시오.
 
+[Grounding 규칙]
+제공된 이력서, JD, GitHub 데이터만 사용하십시오. 외부 지식이나 일반 상식으로 추론하지 마십시오.
+확인할 수 없는 정보는 "[확인 필요]"로 표시하십시오.
+
 [핵심 원칙 — 모든 생성의 기초]
 원칙 1: 아래 [분석 결과]에 명시된 항목만 코칭합니다.
 원칙 2: after는 before 문장의 단어를 재배열/압축/구체화한 결과입니다. 새로운 내용 창작이 아닙니다.
@@ -376,6 +388,29 @@ ${repoInfo ? '원칙 4: GitHub 데이터는 evidence.content에만 기재합니�
   "문제": "Agile, Scrum, 크로스펑셔널, 스프린트 — 모두 원문에 없는 날조. 원문+플레이스홀더 패턴을 사용해야 함"
 }
 
+=== 예시 3: 수치 추가 (GOOD) ===
+{
+  "before": "결제 시스템 개발 및 운영",
+  "suggestion": "처리 규모나 성과를 수치로 드러내세요.",
+  "after": "결제 시스템 개발 및 운영 [월간 처리 건수/금액 기입]",
+  "category": "quantify"
+}
+
+=== 예시 3: 같은 입력에 대한 BAD ===
+{
+  "before": "결제 시스템 개발 및 운영",
+  "after": "월 100억 원 규모 결제 시스템 설계 및 운영, 99.99% 가용성 달성",
+  "문제": "100억 원, 99.99% — 이력서에 없는 수치 날조"
+}
+
+=== 예시 4: 항목 추가 (GOOD) ===
+{
+  "before": "(이력서에 관련 내용 없음)",
+  "suggestion": "JD에서 요구하는 '상태관리' 경험이 이력서에 없습니다. 관련 경험이 있다면 추가를 권장합니다.",
+  "after": "[Redux/Zustand 등 상태관리 라이브러리 사용 경험이 있다면 기입]",
+  "category": "add-missing"
+}
+
 [분석 결과 (Stage 2a 출력)]
 - matchScore: ${analysis.matchScore}
 - summary: ${analysis.summary}
@@ -402,6 +437,12 @@ ${repoInfo ? `[GitHub 리포지토리 (evidence 작성용)]\n${repoInfo}\n` : ''
 - 피할 표현: ${instruction.toneGuide.avoidPatterns.join(', ')}
 - 원문의 문체(명사형/서술형, 존댓말/평어, 간결/상세)를 분석하고 after에서 동일하게 유지하십시오.
 
+[AI 탐지 회피]
+- 과도한 열정 표현 금지 ("열정적으로", "끊임없이 노력하는")
+- 추상적 미사여구 금지 ("다양한 경험을 통해 성장한", "폭넓은 시야를 가진")
+- 뻔한 서론/결론 패턴 금지 ("저는 ~하는 사람입니다", "이러한 경험을 바탕으로")
+- 자연스러운 구어체 문장 구조를 사용하십시오
+
 [검증 규칙]
 - after에 이력서 원문에 없는 고유명사(기술명, 회사명, 프레임워크명)가 등장하면 해당 항목은 무효입니다.
 ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. after 문장에 직접 삽입하지 마십시오.' : ''}
@@ -412,7 +453,6 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
       model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
-        temperature: 0.4,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -507,7 +547,6 @@ async function generateCoachingWithFallbackSchema(prompt: string): Promise<Coach
     model: 'gemini-3-pro-preview',
     contents: prompt,
     config: {
-      temperature: 0.4,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -701,6 +740,10 @@ ${data.readme ? `- README (최대 2000자):\n${data.readme.slice(0, 2000)}` : ''
 
   const prompt = `당신은 GitHub 활동 분석 전문가입니다.
 아래 GitHub 레포지토리 데이터를 분석하여 채용 공고의 요구사항과 매핑하십시오.
+
+[Grounding 규칙]
+제공된 이력서, JD, GitHub 데이터만 사용하십시오. 외부 지식이나 일반 상식으로 추론하지 마십시오.
+확인할 수 없는 정보는 "[확인 필요]"로 표시하십시오.
 
 [핵심 원칙]
 실제 데이터에서 직접 확인 가능한 내용만 포함하십시오.
@@ -924,6 +967,10 @@ function buildNarrativePrompt(
   return `[역할]
 당신은 한국 대기업 및 IT 기업의 채용 프로세스에 정통한 자기소개서 작성 전문가입니다.
 
+[Grounding 규칙]
+제공된 이력서, JD, GitHub 데이터만 사용하십시오. 외부 지식이나 일반 상식으로 추론하지 마십시오.
+확인할 수 없는 정보는 "[확인 필요]"로 표시하십시오.
+
 [현재 날짜]
 ${today}
 
@@ -947,10 +994,23 @@ ${sectionTypeInstruction[spec.type] || sectionTypeInstruction['custom']}
 2. 금지 종결어미: "~해요", "~했어요", "~예요", "~함.", "~임."
 3. 겸손하지만 자신감 있는 어조를 유지하십시오.
 
+[AI 탐지 회피]
+- 과도한 열정 표현 금지 ("열정적으로", "끊임없이 노력하는")
+- 추상적 미사여구 금지 ("다양한 경험을 통해 성장한", "폭넓은 시야를 가진")
+- 뻔한 서론/결론 패턴 금지 ("저는 ~하는 사람입니다", "이러한 경험을 바탕으로")
+- 자연스러운 구어체 문장 구조를 사용하십시오
+
 [반환각 방지 — 절대 규칙]
 1. 이력서${hasRepos ? '와 GitHub 데이터' : ''}에 명시된 내용만 활용하십시오.
 2. 없는 경험/기술/수치는 [구체적 경험 기입] 또는 [수치 기입] 플레이스홀더를 사용하십시오.
 ${hasRepos ? '3. GitHub 데이터에서 확인 가능한 기술명만 본문에 포함하십시오.' : ''}
+
+[수치화 패턴 예시]
+- 처리량: "일 N건 → M건 처리" 또는 "[처리량 기입]"
+- 성능: "응답시간 Xs → Ys 단축" 또는 "[성능 개선 수치 기입]"
+- 비용: "운영비 N% 절감" 또는 "[비용 절감 수치 기입]"
+- 규모: "N명 팀 리드" 또는 "[팀 규모 기입]"
+이력서에 수치가 없으면 반드시 [플레이스홀더]를 사용하십시오.
 
 [이력서 활용 우선순위]
 1순위: 회사 경력 (직무, 성과, 역할) — 핵심 근거로 활용
@@ -1000,7 +1060,6 @@ export async function generateNarrativeSection(
       model: 'gemini-3-flash-preview',
       contents: prompt,
       config: {
-        temperature: 0.5,
         responseMimeType: "application/json",
         responseSchema,
       },
