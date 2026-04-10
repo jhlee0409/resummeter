@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { CoachingResult, UserInputData, TailoredInstructionWithRequirements, NarrativeFramework, NarrativeSectionSpec, NarrativeGenerationResult } from '../types';
 import { InsightCard } from './InsightCard';
 import { ScoreDashboard } from './ScoreDashboard';
@@ -49,6 +49,25 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   // ATS & Scoring state
   const [atsScore, setAtsScore] = useState<AtsScore | null>(null);
   const [isLoadingAts, setIsLoadingAts] = useState(false);
+  const [prevAtsScore, setPrevAtsScore] = useState<number | null>(null);
+  const atsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Debounced ATS re-analysis after coaching changes
+  const triggerAtsReanalysis = useCallback((newResumeText: string) => {
+    if (atsDebounceRef.current) clearTimeout(atsDebounceRef.current);
+    atsDebounceRef.current = setTimeout(async () => {
+      if (atsScore) setPrevAtsScore(atsScore.overall);
+      setIsLoadingAts(true);
+      try {
+        const newScore = await analyzeAtsScore(newResumeText, originalData.jobDescription, JSON.stringify(instruction));
+        setAtsScore(newScore);
+      } catch (e) {
+        console.warn('ATS re-analysis failed:', e);
+      } finally {
+        setIsLoadingAts(false);
+      }
+    }, 1500);
+  }, [atsScore, originalData.jobDescription, instruction]);
   const [detailedScore, setDetailedScore] = useState<DetailedScore | null>(null);
   const [isLoadingDetailed, setIsLoadingDetailed] = useState(false);
 
@@ -108,15 +127,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       // Apply or revert the action's before→after replacement in the resume
       if (action.before && action.after) {
         setEditedResume(current => {
-          if (isAccepting) {
-            return current.includes(action.before)
-              ? current.replace(action.before, action.after)
-              : current;
-          } else {
-            return current.includes(action.after)
-              ? current.replace(action.after, action.before)
-              : current;
-          }
+          const updated = isAccepting
+            ? (current.includes(action.before) ? current.replace(action.before, action.after) : current)
+            : (current.includes(action.after) ? current.replace(action.after, action.before) : current);
+
+          // Trigger ATS re-analysis if score exists
+          if (atsScore) triggerAtsReanalysis(updated);
+
+          return updated;
         });
       }
 
@@ -145,7 +163,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   };
 
   const diffElements = useMemo(() => {
-    if (activeTab !== 'resume' || resumeSubTab !== 'diff') return null;
+    if (resumeSubTab !== 'diff') return null;
     const diff = Diff.diffWords(originalData.resumeText, editedResume);
     return diff.map((part, index) => {
       if (part.added) {
@@ -168,7 +186,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
         </span>
       );
     });
-  }, [activeTab, resumeSubTab, originalData.resumeText, editedResume]);
+  }, [resumeSubTab, originalData.resumeText, editedResume]);
 
   const sortedActionItems = useMemo(() => {
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -257,7 +275,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       )}
 
       {/* Score Dashboard */}
-      <ScoreDashboard result={result} originalData={originalData} editedResume={editedResume} />
+      <ScoreDashboard result={result} originalData={originalData} editedResume={editedResume} atsScore={atsScore?.overall ?? null} prevAtsScore={prevAtsScore} isLoadingAts={isLoadingAts} />
 
       {/* Tab Bar — 2-level navigation */}
       <div className="glass-card rounded-2xl overflow-hidden">
@@ -299,12 +317,12 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
         <div className="p-5">
           {/* Gap Map Tab */}
-          {activeTab === 'gap-map' && (
+          <div className={activeTab !== 'gap-map' ? 'hidden' : ''}>
             <GapMapView gapMap={result.gapMap} onActionClick={handleActionClick} />
-          )}
+          </div>
 
           {/* Actions Tab */}
-          {activeTab === 'actions' && (
+          <div className={activeTab !== 'actions' ? 'hidden' : ''}>
             <div className="space-y-6">
               {/* Quick Wins */}
               {result.quickWins.length > 0 && (
@@ -361,15 +379,15 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 </div>
               )}
             </div>
-          )}
+          </div>
 
           {/* Evidence Tab */}
-          {activeTab === 'evidence' && (
+          <div className={activeTab !== 'evidence' ? 'hidden' : ''}>
             <EvidenceBankView evidenceBank={result.evidenceBank} />
-          )}
+          </div>
 
           {/* Narrative Tab */}
-          {activeTab === 'narrative' && (
+          <div className={activeTab !== 'narrative' ? 'hidden' : ''}>
             <div className="space-y-4">
               {narrativeResult ? (
                 <div className="space-y-4">
@@ -382,7 +400,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                       다시 설정
                     </button>
                   </div>
-                  <NarrativeSectionView sections={narrativeResult.sections} />
+                  <NarrativeSectionView sections={narrativeResult.sections} specs={narrativeSpecs} />
                 </div>
               ) : (
                 <NarrativeConfigPanel
@@ -396,108 +414,110 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 />
               )}
             </div>
-          )}
+          </div>
 
           {/* ATS Score Tab */}
-          {activeTab === 'ats-score' && atsScore && (
-            <AtsScoreView atsScore={atsScore} />
-          )}
-          {activeTab === 'ats-score' && !atsScore && (
-            <div className="text-center py-12">
-              <button
-                onClick={handleAnalyzeAts}
-                disabled={isLoadingAts}
-                className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-              >
-                {isLoadingAts ? '분석 중...' : 'ATS 점수 분석'}
-              </button>
-            </div>
-          )}
+          <div className={activeTab !== 'ats-score' ? 'hidden' : ''}>
+            {atsScore ? (
+              <AtsScoreView atsScore={atsScore} />
+            ) : (
+              <div className="text-center py-12">
+                <button
+                  onClick={handleAnalyzeAts}
+                  disabled={isLoadingAts}
+                  className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                >
+                  {isLoadingAts ? '분석 중...' : 'ATS 점수 분석'}
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Detailed Score Tab */}
-          {activeTab === 'detailed-score' && detailedScore && (
-            <DetailedScoreView detailedScore={detailedScore} />
-          )}
-          {activeTab === 'detailed-score' && !detailedScore && (
-            <div className="text-center py-12">
-              <button
-                onClick={handleAnalyzeDetailed}
-                disabled={isLoadingDetailed}
-                className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-              >
-                {isLoadingDetailed ? '분석 중...' : '상세 점수 분석'}
-              </button>
-            </div>
-          )}
+          <div className={activeTab !== 'detailed-score' ? 'hidden' : ''}>
+            {detailedScore ? (
+              <DetailedScoreView detailedScore={detailedScore} />
+            ) : (
+              <div className="text-center py-12">
+                <button
+                  onClick={handleAnalyzeDetailed}
+                  disabled={isLoadingDetailed}
+                  className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                >
+                  {isLoadingDetailed ? '분석 중...' : '상세 점수 분석'}
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Career Statement Tab */}
-          {activeTab === 'career-statement' && (
+          <div className={activeTab !== 'career-statement' ? 'hidden' : ''}>
             <CareerStatementView
               resumeText={originalData.resumeText}
               jobDescription={originalData.jobDescription}
               instruction={instruction}
               githubData={originalData.githubData}
             />
-          )}
+          </div>
 
           {/* Cover Letter Tab */}
-          {activeTab === 'cover-letter' && (
+          <div className={activeTab !== 'cover-letter' ? 'hidden' : ''}>
             <CoverLetterView
               resumeText={originalData.resumeText}
               jobDescription={originalData.jobDescription}
               instruction={instruction}
               coachingResult={result}
             />
-          )}
+          </div>
 
           {/* Interview Tab */}
-          {activeTab === 'interview' && (
+          <div className={activeTab !== 'interview' ? 'hidden' : ''}>
             <MockInterviewView
               resumeText={originalData.resumeText}
               jobDescription={originalData.jobDescription}
               instruction={instruction}
             />
-          )}
+          </div>
 
           {/* Skill Gap Tab */}
-          {activeTab === 'skill-gap' && (
+          <div className={activeTab !== 'skill-gap' ? 'hidden' : ''}>
             <SkillGapView
               gapMap={result.gapMap}
               jobDescription={originalData.jobDescription}
               instruction={instruction}
             />
-          )}
+          </div>
 
           {/* LinkedIn Tab */}
-          {activeTab === 'linkedin' && (
+          <div className={activeTab !== 'linkedin' ? 'hidden' : ''}>
             <LinkedInOptView
               resumeText={originalData.resumeText}
               jobDescription={originalData.jobDescription}
               instruction={instruction}
             />
-          )}
+          </div>
 
           {/* Versions Tab */}
-          {activeTab === 'versions' && (
+          <div className={activeTab !== 'versions' ? 'hidden' : ''}>
             <VersionManagerView
               currentResumeText={editedResume}
               currentJobDescription={originalData.jobDescription}
               currentScore={result.matchScore}
             />
-          )}
+          </div>
 
           {/* About Statement Tab */}
-          {activeTab === 'about-statement' && (
+          <div className={activeTab !== 'about-statement' ? 'hidden' : ''}>
             <AboutStatementView
               resumeText={originalData.resumeText}
               jobDescription={originalData.jobDescription}
               instruction={instruction}
               coachingResult={result}
             />
-          )}
+          </div>
 
           {/* Resume Tab */}
-          {activeTab === 'resume' && (
+          <div className={activeTab !== 'resume' ? 'hidden' : ''}>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               {/* Left: Original */}
               <div className="lg:col-span-3 hidden lg:block">
@@ -564,7 +584,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 

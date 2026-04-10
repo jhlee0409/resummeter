@@ -5,9 +5,12 @@ interface ScoreDashboardProps {
   result: CoachingResult;
   originalData: UserInputData;
   editedResume: string;
+  atsScore?: number | null;
+  prevAtsScore?: number | null;
+  isLoadingAts?: boolean;
 }
 
-export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, originalData, editedResume }) => {
+export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, originalData, editedResume, atsScore, prevAtsScore, isLoadingAts }) => {
   const scoreConfig = useMemo(() => {
     if (result.matchScore >= 75) return { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: '우수' };
     if (result.matchScore >= 50) return { bg: 'bg-amber-500/10', text: 'text-amber-400', label: '보통' };
@@ -64,18 +67,40 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, original
         <p className="text-[10px] text-zinc-500 mt-0.5">{insightCount}개 인사이트</p>
       </div>
 
-      {/* Word Count */}
-      <div className="glass-card p-5 rounded-2xl flex items-center justify-between">
-        <div>
-          <p className="text-[11px] text-zinc-500 font-medium">글자수 변화</p>
-        </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-dark-800/50 rounded-lg">
-          <span className="text-[11px] text-zinc-500 section-num">{origWordCount}</span>
-          <svg className="w-3 h-3 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-          </svg>
-          <span className="text-[11px] font-semibold text-zinc-300 section-num">{newWordCount}단어</span>
-        </div>
+      {/* Word Count / ATS Score Change */}
+      <div className="glass-card p-5 rounded-2xl">
+        {atsScore != null ? (
+          <div>
+            <p className="text-[11px] text-zinc-500 font-medium">ATS 점수</p>
+            <div className="flex items-center gap-2 mt-1">
+              {prevAtsScore != null && prevAtsScore !== atsScore && (
+                <>
+                  <span className="text-[11px] text-zinc-500 section-num">{prevAtsScore}</span>
+                  <svg className="w-3 h-3 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </>
+              )}
+              <span className={`text-lg font-black section-num ${atsScore >= 75 ? 'text-emerald-400' : atsScore >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                {isLoadingAts ? '...' : atsScore}
+              </span>
+              {prevAtsScore != null && atsScore > prevAtsScore && (
+                <span className="text-[10px] text-emerald-400 font-semibold">+{atsScore - prevAtsScore}</span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-[11px] text-zinc-500 font-medium">글자수 변화</p>
+            <div className="flex items-center gap-1.5 mt-1 px-2.5 py-1.5 bg-dark-800/50 rounded-lg">
+              <span className="text-[11px] text-zinc-500 section-num">{origWordCount}</span>
+              <svg className="w-3 h-3 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+              </svg>
+              <span className="text-[11px] font-semibold text-zinc-300 section-num">{newWordCount}단어</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
