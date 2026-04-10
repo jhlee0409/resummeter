@@ -10,10 +10,43 @@ import {
 
 interface PipelinePanelProps {
   onRun: (type: PipelineType, results: PipelineResults) => void;
+  onNavigate?: (tab: string) => void;
   resumeText: string;
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
   coachingResult: CoachingResult;
+}
+
+// Maps pipeline results to navigable summary cards
+interface ResultCard {
+  label: string;
+  tab: string;
+  status: 'done' | 'error';
+  detail: string;
+}
+
+function getResultCards(type: PipelineType, results: PipelineResults): ResultCard[] {
+  const cards: ResultCard[] = [];
+  switch (type) {
+    case 'application-package':
+      if (results.careerStatements) cards.push({ label: '경력기술서', tab: 'career-statement', status: 'done', detail: `${results.careerStatements.statements?.length ?? 0}개 항목 생성` });
+      if (results.coverLetter) cards.push({ label: '커버레터', tab: 'cover-letter', status: 'done', detail: '작성 완료' });
+      if (results.narrativeSections) cards.push({ label: '서술형', tab: 'narrative', status: 'done', detail: `${results.narrativeSections.sections?.length ?? 0}개 섹션 생성` });
+      break;
+    case 'score-optimization':
+      if (results.atsScore) cards.push({ label: 'ATS 점수', tab: 'ats-score', status: 'done', detail: `${results.atsScore.overall}점` });
+      if (results.practitionerReview) cards.push({ label: '실무자 시선', tab: 'practitioner', status: 'done', detail: results.practitionerReview.hiringRecommendation });
+      break;
+    case 'interview-prep':
+      if (results.interviewQuestions) cards.push({ label: '면접 질문', tab: 'interview', status: 'done', detail: `${results.interviewQuestions.length ?? 0}개 질문` });
+      if (results.practitionerReview) cards.push({ label: '실무자 시선', tab: 'practitioner', status: 'done', detail: results.practitionerReview.hiringRecommendation });
+      break;
+    case 'personal-branding':
+      if (results.linkedinOptimization) cards.push({ label: 'LinkedIn', tab: 'linkedin', status: 'done', detail: '프로필 최적화 완료' });
+      cards.push({ label: '한줄소개', tab: 'about-statement', status: 'done', detail: '직접 입력 후 고도화' });
+      break;
+  }
+  return cards;
 }
 
 interface PipelineCard {
@@ -158,6 +191,7 @@ export function PipelinePanel({
   const [completedTypes, setCompletedTypes] = useState<Set<PipelineType>>(
     new Set(),
   );
+  const [pipelineResults, setPipelineResults] = useState<Record<string, PipelineResults>>({});
 
   const handleRun = async (type: PipelineType) => {
     if (runningType) return; // prevent concurrent runs
@@ -176,6 +210,7 @@ export function PipelinePanel({
       );
 
       setCompletedTypes((prev) => new Set([...prev, type]));
+      setPipelineResults((prev) => ({ ...prev, [type]: results }));
       onRun(type, results);
     } catch (err) {
       console.error('Pipeline failed:', err);
@@ -289,23 +324,37 @@ export function PipelinePanel({
                 </p>
               </div>
 
-              {/* Progress Area */}
+              {/* Progress / Results Area */}
               <div className="p-3 space-y-1.5">
                 {currentProgress ? (
                   currentProgress.steps.map((step) => (
                     <StepIndicator key={step.id} step={step} />
                   ))
+                ) : completed && pipelineResults[card.type] ? (
+                  <div className="space-y-1.5">
+                    {getResultCards(card.type, pipelineResults[card.type]).map((rc) => (
+                      <button
+                        key={rc.tab}
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onNavigate?.(rc.tab); }}
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors text-left"
+                      >
+                        <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-[11px] font-semibold text-emerald-300">{rc.label}</span>
+                        <span className="text-[10px] text-zinc-500 ml-auto">{rc.detail}</span>
+                        <svg className="w-3 h-3 text-zinc-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center py-2">
-                    {completed ? (
-                      <span className="text-[10px] text-zinc-500">
-                        다시 실행하려면 클릭하세요
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-zinc-600">
-                        클릭하여 실행
-                      </span>
-                    )}
+                    <span className="text-[10px] text-zinc-600">
+                      클릭하여 실행
+                    </span>
                   </div>
                 )}
               </div>

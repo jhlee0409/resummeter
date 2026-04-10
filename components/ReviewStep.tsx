@@ -287,6 +287,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
         jobDescription={originalData.jobDescription}
         instruction={instruction}
         coachingResult={result}
+        onNavigate={(tab) => switchTab(tab as ReviewTab)}
         onRun={(type, results) => {
           if (results.atsScore) setAtsScore(results.atsScore);
           if (results.careerStatements || results.coverLetter || results.narrativeSections) {
