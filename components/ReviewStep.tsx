@@ -20,6 +20,8 @@ import LinkedInOptView from './LinkedInOptView';
 import VersionManagerView from './VersionManagerView';
 import { AboutStatementView } from './AboutStatementView';
 import { PractitionerSimView } from './PractitionerSimView';
+import { PipelinePanel } from './PipelinePanel';
+import type { PipelineResults } from '../services/pipelineService';
 import { analyzeAtsScore, analyzeDetailedScore } from '../services/atsService';
 import type { AtsScore, DetailedScore } from '../types';
 
@@ -278,6 +280,26 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
       {/* Score Dashboard */}
       <ScoreDashboard result={result} originalData={originalData} editedResume={editedResume} atsScore={atsScore?.overall ?? null} prevAtsScore={prevAtsScore} isLoadingAts={isLoadingAts} />
+
+      {/* Pipeline Panel */}
+      <PipelinePanel
+        resumeText={editedResume}
+        jobDescription={originalData.jobDescription}
+        instruction={instruction}
+        coachingResult={result}
+        onRun={(type, results) => {
+          if (results.atsScore) setAtsScore(results.atsScore);
+          if (results.careerStatements || results.coverLetter || results.narrativeSections) {
+            // Switch to the first relevant tab
+            if (results.careerStatements) switchTab('career-statement');
+            else if (results.coverLetter) switchTab('cover-letter');
+            else if (results.narrativeSections) { setNarrativeResult(results.narrativeSections); switchTab('narrative'); }
+          }
+          if (results.interviewQuestions) switchTab('interview');
+          if (results.linkedinOptimization) switchTab('linkedin');
+          if (results.practitionerReview) switchTab('practitioner');
+        }}
+      />
 
       {/* Tab Bar — 2-level navigation */}
       <div className="glass-card rounded-2xl overflow-hidden">
