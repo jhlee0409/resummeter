@@ -19,6 +19,7 @@ import SkillGapView from './SkillGapView';
 import LinkedInOptView from './LinkedInOptView';
 import VersionManagerView from './VersionManagerView';
 import { AboutStatementView } from './AboutStatementView';
+import { PractitionerSimView } from './PractitionerSimView';
 import { analyzeAtsScore, analyzeDetailedScore } from '../services/atsService';
 import type { AtsScore, DetailedScore } from '../types';
 
@@ -29,7 +30,7 @@ interface ReviewStepProps {
   onRestart: () => void;
 }
 
-type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement';
+type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement' | 'practitioner';
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, instruction, onRestart }) => {
   const [activeTab, setActiveTab] = useState<ReviewTab>('gap-map');
@@ -204,6 +205,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       { key: 'resume', label: '이력서', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
       { key: 'ats-score', label: 'ATS', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
       { key: 'detailed-score', label: '상세 점수', icon: 'M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+      { key: 'practitioner', label: '실무자 시선', icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z' },
     ]},
     { key: 'application', label: '지원서 작성', tabs: [
       { key: 'narrative', label: '서술형', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
@@ -503,6 +505,15 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
               currentResumeText={editedResume}
               currentJobDescription={originalData.jobDescription}
               currentScore={result.matchScore}
+            />
+          </div>
+
+          {/* Practitioner Simulation Tab */}
+          <div className={activeTab !== 'practitioner' ? 'hidden' : ''}>
+            <PractitionerSimView
+              resumeText={originalData.resumeText}
+              jobDescription={originalData.jobDescription}
+              instruction={instruction}
             />
           </div>
 
