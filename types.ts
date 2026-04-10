@@ -133,8 +133,11 @@ export interface EvidenceBank {
   highlights: Evidence[];
 }
 
+export type Industry = 'it' | 'finance' | 'manufacturing' | 'public' | 'general';
+
 export interface TailoredInstructionWithRequirements extends TailoredInstruction {
   jdRequirements: JdRequirement[];
+  detectedIndustry?: Industry;
 }
 
 export interface CoachingResult {
@@ -198,6 +201,32 @@ export interface NarrativeSectionResult {
   techNarrativeBreakdown?: TechNarrativeBreakdown;
   keywordsUsed: string[];
   githubEvidences: string[];
+}
+
+export interface NarrativeAnalysis {
+  questionBreakdown: {
+    corePoints: string[];
+    narrativeSubject: 'strength' | 'project' | 'value' | 'contribution' | 'other';
+    subjectReason: string;
+  };
+  selectedExperience: {
+    main: {
+      name: string;
+      reason: string;
+      relatedJdRequirements: string[];
+    };
+    sub?: {
+      name: string;
+      connectionToMain: string;
+    };
+  };
+  jdKeywordsToWeave: string[];
+  outline: Record<string, unknown>;
+  humanTouchPoints: {
+    personalContext: string;
+    limitation: string;
+    lessonLearned: string;
+  };
 }
 
 export interface NarrativeGenerationResult {

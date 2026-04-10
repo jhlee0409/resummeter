@@ -69,6 +69,11 @@ interface AnalysisIntermediate {
 export async function generateTailoredInstruction(jobDescription: string): Promise<TailoredInstructionWithRequirements> {
   validateJDInput(jobDescription);
 
+  // 업종 자동 감지
+  const { detectIndustry, buildIndustryContext } = await import('./industryDetect');
+  const detectedIndustry = detectIndustry(jobDescription);
+  const industryContext = buildIndustryContext(detectedIndustry);
+
   const metaPrompt = `
     당신은 세계 최고의 프롬프트 엔지니어이자 채용 컨설턴트입니다.
     아래의 [채용 공고(JD)]를 심층 분석하여, 이 포지션의 지원자를 평가할 **'AI 면접관의 페르소나'**와 **'이력서 최적화 가이드라인'**을 작성해주세요.
@@ -145,9 +150,10 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
     const jsonText = response.text;
     if (!jsonText) return DEFAULT_INSTRUCTION;
     try {
-      return JSON.parse(jsonText) as TailoredInstructionWithRequirements;
+      const parsed = JSON.parse(jsonText) as TailoredInstructionWithRequirements;
+      return { ...parsed, detectedIndustry };
     } catch {
-      return DEFAULT_INSTRUCTION;
+      return { ...DEFAULT_INSTRUCTION, detectedIndustry };
     }
   } catch (e) {
     console.warn("Failed to generate tailored instruction, using default.", classifyError(e));
@@ -217,9 +223,12 @@ async function analyzeResume(
 
   const repoInfo = formatRepoInfo(githubRepos, githubData);
   const today = new Date().toISOString().split('T')[0];
+  const { buildIndustryContext } = await import('./industryDetect');
+  const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
 
   const prompt = `[역할]
 당신은 이력서 분석 전문가입니다.
+${industryContext}
 
 [현재 날짜]
 ${today} — 이 날짜 기준으로 과거/현재/미래를 판단하십시오.
@@ -336,9 +345,12 @@ async function generateCoaching(
 ): Promise<CoachingResult> {
   const repoInfo = formatRepoInfo(githubRepos, githubData);
   const today = new Date().toISOString().split('T')[0];
+  const { buildIndustryContext } = await import('./industryDetect');
+  const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
 
   const prompt = `[역할]
 당신은 이력서 코칭 전문가입니다.
+${industryContext}
 
 [현재 날짜]
 ${today} — 이 날짜 기준으로 과거/현재/미래를 판단하십시오.
