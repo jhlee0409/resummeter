@@ -462,6 +462,8 @@ export interface CompanyContext {
   idealCandidate: string;
   recentNews: string[];
   businessDirection: string;
+  roleInsight: string;           // 직무(포지션)에 대한 업계 리서치
+  roleKeyTraits: string[];       // 이 직무에서 성공하는 사람의 핵심 특성
   confidence: number;            // 0-1, 정보 신뢰도
   sources: string[];             // 참고한 출처 URL
 }

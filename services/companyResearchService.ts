@@ -47,11 +47,16 @@ ${jobDescription.slice(0, 1500)}
 
 다음 항목을 조사해서 JSON으로 반환하세요:
 
+**회사 정보:**
 1. **techStack**: 이 회사가 사용하는 기술 스택 (공식 기술 블로그, 채용 공고, GitHub 기반)
 2. **culture**: 조직 문화 요약 (2-3문장. 채용 페이지, 기술 블로그, 인터뷰 기사 기반)
 3. **idealCandidate**: 이 회사가 원하는 인재상 (2-3문장. 채용 공고, 대표 인터뷰 기반)
 4. **recentNews**: 최근 뉴스/동향 (최대 3건. 투자, 신규 서비스, 조직 변화 등)
 5. **businessDirection**: 현재 사업 방향과 중점 영역 (1-2문장)
+
+**직무 리서치:**
+6. **roleInsight**: 채용 공고에 나온 직무/포지션이 업계에서 어떤 역할인지 리서치 (2-3문장). 이 직무의 기원, 다른 회사에서의 유사 역할, 일반 개발자와의 차이점 등. 예: "Forward Deployed Engineer"라면 팔란티어에서 시작된 역할이며, 고객사에 직접 파견되어 기술로 문제를 해결하는 엔지니어라는 점.
+7. **roleKeyTraits**: 이 직무에서 성공하는 사람의 핵심 특성 3-5개. 업계 사례/인터뷰 기반. 예: "고객 앞에서 문제를 정의하는 능력", "빠른 프로토타이핑", "기술+비즈니스 양쪽 언어 구사" 등.
 
 [규칙]
 - 검색으로 확인된 사실만 포함. 추측하지 마십시오.
@@ -76,8 +81,10 @@ ${jobDescription.slice(0, 1500)}
             idealCandidate: { type: Type.STRING },
             recentNews: { type: Type.ARRAY, items: { type: Type.STRING } },
             businessDirection: { type: Type.STRING },
+            roleInsight: { type: Type.STRING, description: '직무/포지션의 업계 맥락 (기원, 유사 역할, 차이점)' },
+            roleKeyTraits: { type: Type.ARRAY, items: { type: Type.STRING }, description: '이 직무에서 성공하는 사람의 핵심 특성 3-5개' },
           },
-          required: ['techStack', 'culture', 'idealCandidate', 'recentNews', 'businessDirection'],
+          required: ['techStack', 'culture', 'idealCandidate', 'recentNews', 'businessDirection', 'roleInsight', 'roleKeyTraits'],
         },
       },
     }));
@@ -91,6 +98,8 @@ ${jobDescription.slice(0, 1500)}
       idealCandidate: string;
       recentNews: string[];
       businessDirection: string;
+      roleInsight: string;
+      roleKeyTraits: string[];
     }>(jsonText, '회사 정보 수집');
 
     // 출처 URL 추출
@@ -106,8 +115,10 @@ ${jobDescription.slice(0, 1500)}
       parsed.idealCandidate.length > 10,
       parsed.recentNews.length > 0,
       parsed.businessDirection.length > 10,
+      parsed.roleInsight?.length > 10,
+      (parsed.roleKeyTraits?.length ?? 0) > 0,
     ].filter(Boolean).length;
-    const confidence = filledFields / 5;
+    const confidence = filledFields / 7;
 
     return {
       companyName,
@@ -116,6 +127,8 @@ ${jobDescription.slice(0, 1500)}
       idealCandidate: parsed.idealCandidate,
       recentNews: parsed.recentNews,
       businessDirection: parsed.businessDirection,
+      roleInsight: parsed.roleInsight || '',
+      roleKeyTraits: parsed.roleKeyTraits || [],
       confidence,
       sources,
     };
@@ -148,8 +161,14 @@ export function formatCompanyContext(ctx: CompanyContext): string {
   if (ctx.recentNews.length > 0) {
     parts.push(`최근 동향: ${ctx.recentNews.join(' | ')}`);
   }
+  if (ctx.roleInsight) {
+    parts.push(`\n[직무 리서치]\n${ctx.roleInsight}`);
+  }
+  if (ctx.roleKeyTraits.length > 0) {
+    parts.push(`이 직무 성공 핵심 특성: ${ctx.roleKeyTraits.join(', ')}`);
+  }
 
-  parts.push(`\n이 회사의 맥락을 반영하여 분석과 코칭을 수행하십시오. 회사 정보 신뢰도: ${Math.round(ctx.confidence * 100)}%.`);
+  parts.push(`\n이 회사와 직무의 맥락을 반영하여 분석과 코칭을 수행하십시오. 정보 신뢰도: ${Math.round(ctx.confidence * 100)}%.`);
 
   return parts.join('\n');
 }
