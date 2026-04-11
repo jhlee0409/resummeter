@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateResumeInput, validateJDInput, safeParseJSON } from '../../services/validation';
-import { GeminiAPIError } from '../../services/errors';
+import { validateResumeInput, validateJDInput, safeParseJSON } from '../../../shared/lib/validation';
+import { GeminiAPIError } from '../../../shared/lib/errors';
 
 describe('validateResumeInput', () => {
   it('빈 문자열이면 INVALID_INPUT 에러', () => {

@@ -16,7 +16,7 @@ const localStorageMock = {
 Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true });
 
 // Must import after mocking localStorage
-import { track, getAnalyticsSummary, clearAnalytics } from '../../services/analytics';
+import { track, getAnalyticsSummary, clearAnalytics } from '../../../shared/lib/analytics';
 
 describe('analytics', () => {
   beforeEach(() => {

@@ -18,7 +18,7 @@ import {
   clearAnalysisCache,
   hasCachedAnalysis,
   getCacheEntryCount,
-} from '../../services/analysisCache';
+} from '../../../features/review/services/analysisCache';
 
 const mockInstruction = { persona: 'test', keywords: ['a'], evaluationCriteria: { hardSkills: [], softSkills: [], preferredExperience: [] }, toneGuide: { style: '', endings: '', avoidPatterns: [] }, jdRequirements: [], detectedIndustry: 'it' as const } as any;
 const mockResult = { matchScore: 85, summary: 'test', gapMap: [], actionItems: [], quickWins: [], optimizedResume: '', insights: [] } as any;

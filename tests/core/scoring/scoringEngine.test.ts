@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { calculateScore } from '../../services/scoringEngine';
-import { parseJDRequirements, parseResumeExperience } from '../../services/requirementParser';
-import type { GapMapItem, TailoredInstructionWithRequirements } from '../../types';
+import { calculateScore } from '../../../core/scoring/scoringEngine';
+import { parseJDRequirements, parseResumeExperience } from '../../../core/scoring/requirementParser';
+import type { GapMapItem, TailoredInstructionWithRequirements } from '../../../types';
 
 const mockInstruction = {
   persona: 'test',

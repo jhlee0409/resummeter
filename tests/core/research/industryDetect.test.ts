@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectIndustry, buildIndustryContext, INDUSTRY_PROFILES } from '../../services/industryDetect';
+import { detectIndustry, buildIndustryContext, INDUSTRY_PROFILES } from '../../../core/research/industryDetect';
 
 describe('detectIndustry', () => {
   it('IT 키워드가 3개 이상이면 it 반환', () => {

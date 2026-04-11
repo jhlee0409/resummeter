@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GeminiAPIError, classifyError } from '../../services/errors';
+import { GeminiAPIError, classifyError } from '../../../shared/lib/errors';
 
 describe('GeminiAPIError', () => {
   it('Error를 상속한다', () => {

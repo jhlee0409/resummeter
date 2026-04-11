@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { saveVersion, getVersions, deleteVersion, updateVersion, compareVersions } from '../../services/versionService';
+import { saveVersion, getVersions, deleteVersion, updateVersion, compareVersions } from '../../../features/versions/service';
 
 const store: Record<string, string> = {};
 const localStorageMock = {

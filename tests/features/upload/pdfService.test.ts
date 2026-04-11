@@ -7,7 +7,7 @@ vi.mock('pdfjs-dist', () => ({
 }));
 vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({ default: '' }));
 
-import { validatePdfFile, getErrorMessage } from '../../services/pdfService';
+import { validatePdfFile, getErrorMessage } from '../../../features/upload/services/pdfService';
 
 describe('validatePdfFile', () => {
   it('10MB 초과 파일은 TOO_LARGE 반환', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { withRetry } from '../../services/retry';
+import { withRetry } from '../../../shared/api/retry';
 
 describe('withRetry', () => {
   it('성공하면 결과를 반환한다', async () => {
