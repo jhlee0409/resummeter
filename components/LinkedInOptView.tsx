@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import { toast } from "sonner";
-import type { TailoredInstructionWithRequirements, LinkedInOptimization, CompanyContext } from "../types";
-import { generateLinkedInOptimization } from "../services/skillGapService";
+import type { TailoredInstructionWithRequirements, CompanyContext } from "../types";
+import { useFeatureStore } from "../stores/featureStore";
 
 interface LinkedInOptViewProps {
   resumeText: string;
@@ -11,21 +11,12 @@ interface LinkedInOptViewProps {
 }
 
 export default function LinkedInOptView({ resumeText, jobDescription, instruction, companyContext }: LinkedInOptViewProps) {
-  const [optimization, setOptimization] = useState<LinkedInOptimization | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await generateLinkedInOptimization(resumeText, jobDescription, instruction, companyContext);
-      setOptimization(result);
-    } catch (err) {
-      console.error("LinkedIn 최적화 생성 실패:", err);
-      setError("LinkedIn 프로필 최적화에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setLoading(false);
-    }
+  const { result, loading, error } = useFeatureStore(s => s.linkedIn);
+  const generateLinkedIn = useFeatureStore(s => s.generateLinkedIn);
+  const optimization = result;
+
+  const handleGenerate = () => {
+    generateLinkedIn(resumeText, jobDescription, instruction, companyContext);
   };
 
   const handleCopy = (text: string) => {

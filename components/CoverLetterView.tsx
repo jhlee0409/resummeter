@@ -7,10 +7,9 @@ import {
   CoverLetterTone,
   CoverLetterLength,
   CoverLetterLanguage,
-  CoverLetterResult,
   CompanyContext,
 } from '../types';
-import { generateCoverLetter } from '../services/careerDocService';
+import { useFeatureStore } from '../stores/featureStore';
 
 interface CoverLetterViewProps {
   resumeText: string;
@@ -27,34 +26,23 @@ export function CoverLetterView({
   coachingResult,
   companyContext,
 }: CoverLetterViewProps) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<CoverLetterResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { result, loading, error } = useFeatureStore(s => s.coverLetter);
+  const storeGenerateCoverLetter = useFeatureStore(s => s.generateCoverLetter);
 
   const [tone, setTone] = useState<CoverLetterTone>('confident');
   const [length, setLength] = useState<CoverLetterLength>('medium');
   const [language, setLanguage] = useState<CoverLetterLanguage>('ko');
 
   const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const config: CoverLetterConfig = { tone, length, language };
-      const generated = await generateCoverLetter(
-        resumeText,
-        jobDescription,
-        instruction,
-        config,
-        coachingResult,
-        companyContext
-      );
-      setResult(generated);
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
-    }
+    const config: CoverLetterConfig = { tone, length, language };
+    await storeGenerateCoverLetter(
+      resumeText,
+      jobDescription,
+      instruction,
+      config,
+      coachingResult,
+      companyContext
+    );
   };
 
   const copyToClipboard = () => {

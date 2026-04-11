@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React from "react";
 import type { TailoredInstructionWithRequirements } from "../types";
-import { generatePractitionerReview, type PractitionerReview } from "../services/practitionerService";
+import type { PractitionerReview } from "../services/practitionerService";
+import { useFeatureStore } from "../stores/featureStore";
 
 interface PractitionerSimViewProps {
   resumeText: string;
@@ -39,23 +40,12 @@ const RECOMMENDATION_CONFIG: Record<
 };
 
 export function PractitionerSimView({ resumeText, jobDescription, instruction }: PractitionerSimViewProps) {
-  const [review, setReview] = useState<PractitionerReview | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { result, loading, error } = useFeatureStore(s => s.practitioner);
+  const generatePractitioner = useFeatureStore(s => s.generatePractitioner);
+  const review = result;
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await generatePractitionerReview(resumeText, jobDescription, instruction);
-      setReview(result);
-    } catch (err) {
-      console.error("실무자 시뮬레이션 실패:", err);
-      const msg = err instanceof Error ? err.message : "실무자 분석에 실패했습니다. 다시 시도해주세요.";
-      setError(msg);
-    } finally {
-      setLoading(false);
-    }
+  const handleGenerate = () => {
+    generatePractitioner(resumeText, jobDescription, instruction);
   };
 
   return (

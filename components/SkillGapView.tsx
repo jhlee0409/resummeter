@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import type { GapMapItem, TailoredInstructionWithRequirements, LearningRoadmap, SkillGapItem, CompanyContext } from "../types";
-import { analyzeLearningRoadmap } from "../services/skillGapService";
+import React from "react";
+import type { GapMapItem, TailoredInstructionWithRequirements, CompanyContext } from "../types";
+import { useFeatureStore } from "../stores/featureStore";
 
 interface SkillGapViewProps {
   gapMap: GapMapItem[];
@@ -52,22 +52,12 @@ const platformLabels: Record<string, string> = {
 };
 
 export default function SkillGapView({ gapMap, jobDescription, instruction, companyContext }: SkillGapViewProps) {
-  const [roadmap, setRoadmap] = useState<LearningRoadmap | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { result, loading, error } = useFeatureStore(s => s.skillGap);
+  const generateSkillGap = useFeatureStore(s => s.generateSkillGap);
+  const roadmap = result;
 
-  const handleGenerateRoadmap = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await analyzeLearningRoadmap(gapMap, jobDescription, instruction, companyContext);
-      setRoadmap(result);
-    } catch (err) {
-      console.error("학습 로드맵 생성 실패:", err);
-      setError("학습 로드맵 생성에 실패했습니다. 다시 시도해주세요.");
-    } finally {
-      setLoading(false);
-    }
+  const handleGenerateRoadmap = () => {
+    generateSkillGap(gapMap, jobDescription, instruction, companyContext);
   };
 
   // missing/weak 항목만 필터링

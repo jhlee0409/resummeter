@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { analyzeGap } from '../services/gapAnalysisService';
-import type { GapAnalysisResult, GapMatch, CompanyContext, TailoredInstructionWithRequirements } from '../types';
+import type { GapMatch, CompanyContext, TailoredInstructionWithRequirements } from '../types';
+import { useFeatureStore } from '../stores/featureStore';
 
 interface GapAnalysisViewProps {
   resumeText: string;
@@ -19,19 +19,14 @@ const severityConfig = {
 export const GapAnalysisView: React.FC<GapAnalysisViewProps> = ({
   resumeText, jobDescription, instruction, companyContext,
 }) => {
-  const [result, setResult] = useState<GapAnalysisResult | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const { result, loading, error } = useFeatureStore(s => s.gapAnalysis);
+  const generateGapAnalysis = useFeatureStore(s => s.generateGapAnalysis);
+  const isLoading = loading;
 
-  const handleAnalyze = async () => {
-    setIsLoading(true);
-    try {
-      const analysis = await analyzeGap(resumeText, jobDescription, instruction, companyContext);
-      setResult(analysis);
-    } catch (e: any) {
-      toast.error(e?.userMessage || '역량 갭 분석에 실패했습니다.');
-    } finally {
-      setIsLoading(false);
-    }
+  useEffect(() => { if (error) toast.error(error); }, [error]);
+
+  const handleAnalyze = () => {
+    generateGapAnalysis(resumeText, jobDescription, instruction, companyContext);
   };
 
   if (!result) {

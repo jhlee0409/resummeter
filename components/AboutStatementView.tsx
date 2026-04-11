@@ -3,11 +3,10 @@ import { toast } from 'sonner';
 import {
   TailoredInstructionWithRequirements,
   CoachingResult,
-  AboutStatementResult,
   AboutStatementVersion,
   CompanyContext,
 } from '../types';
-import { refineAboutStatement } from '../services/careerDocService';
+import { useFeatureStore } from '../stores/featureStore';
 
 interface AboutStatementViewProps {
   resumeText: string;
@@ -43,33 +42,21 @@ export function AboutStatementView({
   companyContext,
 }: AboutStatementViewProps) {
   const [inputStatement, setInputStatement] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<AboutStatementResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const handleGenerate = async () => {
-    if (!inputStatement.trim()) {
-      setError('자기소개 문장을 입력해주세요.');
-      return;
-    }
 
-    setLoading(true);
-    setError(null);
-    try {
-      const generated = await refineAboutStatement(
-        inputStatement,
-        resumeText,
-        jobDescription,
-        instruction,
-        coachingResult,
-        companyContext
-      );
-      setResult(generated);
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
-    }
+  const { result, loading, error } = useFeatureStore(s => s.aboutStatement);
+  const storeGenerateAboutStatement = useFeatureStore(s => s.generateAboutStatement);
+
+  const handleGenerate = async () => {
+    if (!inputStatement.trim()) return;
+
+    await storeGenerateAboutStatement(
+      inputStatement,
+      resumeText,
+      jobDescription,
+      instruction,
+      coachingResult,
+      companyContext
+    );
   };
 
   const copyToClipboard = async (version: AboutStatementVersion) => {

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import * as Tabs from '@radix-ui/react-tabs';
 import * as Progress from '@radix-ui/react-progress';
 import { TailoredInstructionWithRequirements, InterviewQuestion, InterviewFeedback, CompanyContext } from "../types";
-import { generateInterviewQuestions, evaluateAnswer } from "../services/interviewService";
+import { useFeatureStore } from "../stores/featureStore";
 
 interface MockInterviewViewProps {
   resumeText: string;
@@ -14,37 +14,48 @@ interface MockInterviewViewProps {
 type InterviewStep = 'idle' | 'generating' | 'answering' | 'feedback';
 
 export default function MockInterviewView({ resumeText, jobDescription, instruction, companyContext }: MockInterviewViewProps) {
-  const [step, setStep] = useState<InterviewStep>('idle');
-  const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
+  // ── Store state ──
+  const { result: questions, loading: isGenerating, error, answers, feedbacks } = useFeatureStore(s => s.interview);
+  const storeGenerateQuestions = useFeatureStore(s => s.generateInterviewQuestions);
+  const storeSubmitAnswer = useFeatureStore(s => s.submitInterviewAnswer);
+
+  // ── Local UI state ──
+  const [step, setStep] = useState<InterviewStep>(() => {
+    if (isGenerating) return 'generating';
+    if (questions && questions.length > 0) return 'answering';
+    return 'idle';
+  });
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [feedback, setFeedback] = useState<InterviewFeedback | null>(null);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [feedbacks, setFeedbacks] = useState<Record<string, InterviewFeedback>>({});
   const [showStarGuide, setShowStarGuide] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'technical' | 'behavioral'>('technical');
 
-  const currentQuestion = questions[currentQuestionIndex];
-  const technicalQuestions = questions.filter(q => q.type === 'technical');
-  const behavioralQuestions = questions.filter(q => q.type === 'behavioral');
+  // ── Sync store → local step ──
+  useEffect(() => {
+    if (questions && questions.length > 0 && step === 'generating') setStep('answering');
+  }, [questions]);
+  useEffect(() => {
+    if (isGenerating && step === 'idle') setStep('generating');
+  }, [isGenerating]);
+
+  const questionsList = questions ?? [];
+  const currentQuestion = questionsList[currentQuestionIndex];
+  const technicalQuestions = questionsList.filter(q => q.type === 'technical');
+  const behavioralQuestions = questionsList.filter(q => q.type === 'behavioral');
   const displayQuestions = activeTab === 'technical' ? technicalQuestions : behavioralQuestions;
 
   const completedCount = Object.keys(feedbacks).length;
-  const progressPercentage = questions.length > 0 ? (completedCount / questions.length) * 100 : 0;
+  const progressPercentage = questionsList.length > 0 ? (completedCount / questionsList.length) * 100 : 0;
 
   const handleGenerateQuestions = async () => {
     setStep('generating');
-    setError(null);
     try {
-      const generatedQuestions = await generateInterviewQuestions(resumeText, jobDescription, instruction, companyContext);
-      setQuestions(generatedQuestions);
+      await storeGenerateQuestions(resumeText, jobDescription, instruction, companyContext);
       setStep('answering');
       setCurrentQuestionIndex(0);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
+    } catch {
       setStep('idle');
     }
   };
@@ -56,24 +67,20 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
     }
 
     setIsEvaluating(true);
-    setError(null);
 
     try {
-      const evaluationResult = await evaluateAnswer(currentQuestion, userAnswer, resumeText, jobDescription);
-      setFeedback(evaluationResult);
-      setAnswers(prev => ({ ...prev, [currentQuestion.id]: userAnswer }));
-      setFeedbacks(prev => ({ ...prev, [currentQuestion.id]: evaluationResult }));
+      const fb = await storeSubmitAnswer(currentQuestion, userAnswer, resumeText, jobDescription);
+      setFeedback(fb);
       setStep('feedback');
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
+    } catch {
+      // error is set in the store
     } finally {
       setIsEvaluating(false);
     }
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < questions.length - 1) {
+    if (currentQuestionIndex < questionsList.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
       setUserAnswer("");
       setFeedback(null);
@@ -87,10 +94,10 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
 
   const handleJumpToQuestion = (index: number) => {
     setCurrentQuestionIndex(index);
-    setUserAnswer(answers[questions[index]?.id] || "");
-    setFeedback(feedbacks[questions[index]?.id] || null);
+    setUserAnswer(answers[questionsList[index]?.id] || "");
+    setFeedback(feedbacks[questionsList[index]?.id] || null);
     setShowStarGuide(false);
-    setStep(feedbacks[questions[index]?.id] ? 'feedback' : 'answering');
+    setStep(feedbacks[questionsList[index]?.id] ? 'feedback' : 'answering');
   };
 
   if (step === 'idle') {
@@ -116,7 +123,7 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
             {completedCount > 0 && (
               <div className="bg-green-500/10 border border-green-500/50 rounded-lg p-4 mb-6">
                 <p className="text-green-400">
-                  이전 세션에서 {completedCount}/{questions.length}개 질문을 완료했습니다.
+                  이전 세션에서 {completedCount}/{questionsList.length}개 질문을 완료했습니다.
                 </p>
               </div>
             )}
@@ -162,7 +169,7 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
         <div className="mb-8">
           <div className="flex justify-between items-center mb-2">
             <span className="text-sm text-slate-400">진행도</span>
-            <span className="text-sm font-semibold text-blue-400">{completedCount}/{questions.length} 완료</span>
+            <span className="text-sm font-semibold text-blue-400">{completedCount}/{questionsList.length} 완료</span>
           </div>
           <Progress.Root className="w-full bg-slate-700/50 rounded-full h-3 overflow-hidden" value={progressPercentage}>
             <Progress.Indicator
@@ -198,7 +205,7 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
 
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {displayQuestions.map((q, idx) => {
-                  const globalIndex = questions.findIndex(qq => qq.id === q.id);
+                  const globalIndex = questionsList.findIndex(qq => qq.id === q.id);
                   const isCompleted = !!feedbacks[q.id];
                   const isCurrent = globalIndex === currentQuestionIndex;
 
@@ -244,7 +251,7 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
                     {currentQuestion.type === 'technical' ? '기술면접' : '인성면접'}
                   </span>
                   <span className="text-slate-400 text-sm">
-                    질문 {currentQuestionIndex + 1}/{questions.length}
+                    질문 {currentQuestionIndex + 1}/{questionsList.length}
                   </span>
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">{currentQuestion.question}</h2>
@@ -425,7 +432,7 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
                     onClick={handleNextQuestion}
                     className="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
                   >
-                    {currentQuestionIndex < questions.length - 1 ? '다음 질문으로' : '면접 종료'}
+                    {currentQuestionIndex < questionsList.length - 1 ? '다음 질문으로' : '면접 종료'}
                   </button>
                 </>
               )}

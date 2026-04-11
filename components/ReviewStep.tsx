@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { CoachingResult, UserInputData, TailoredInstructionWithRequirements, NarrativeFramework, NarrativeSectionSpec, NarrativeGenerationResult } from '../types';
+import { useFeatureStore } from '../stores/featureStore';
 import { InsightCard } from './InsightCard';
 import { ScoreDashboard } from './ScoreDashboard';
 import { GapMapView } from './GapMapView';
@@ -48,6 +49,12 @@ type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | '
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, instruction, onRestart }) => {
   const [activeTab, setActiveTab] = useState<ReviewTab>('gap-map');
+  const [visitedTabs, setVisitedTabs] = useState<Set<ReviewTab>>(new Set(['gap-map']));
+
+  const handleTabChange = (tab: ReviewTab) => {
+    setActiveTab(tab);
+    setVisitedTabs(prev => new Set(prev).add(tab));
+  };
   const [editedResume, setEditedResume] = useState(result.optimizedResume);
   const [resumeSubTab, setResumeSubTab] = useState<'editor' | 'preview' | 'diff'>('editor');
   const [copied, setCopied] = useState(false);
@@ -320,15 +327,30 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
         onNavigate={(tab) => switchTab(tab as ReviewTab)}
         onRun={(type, results) => {
           if (results.atsScore) setAtsScore(results.atsScore);
-          if (results.careerStatements || results.coverLetter || results.narrativeSections) {
-            // Switch to the first relevant tab
-            if (results.careerStatements) switchTab('career-statement');
-            else if (results.coverLetter) switchTab('cover-letter');
-            else if (results.narrativeSections) { setNarrativeResult(results.narrativeSections); switchTab('narrative'); }
+          if (results.careerStatements) {
+            useFeatureStore.getState().setCareerStatementResult(results.careerStatements);
+            switchTab('career-statement');
           }
-          if (results.interviewQuestions) switchTab('interview');
-          if (results.linkedinOptimization) switchTab('linkedin');
-          if (results.practitionerReview) switchTab('practitioner');
+          if (results.coverLetter) {
+            useFeatureStore.getState().setCoverLetterResult(results.coverLetter);
+            switchTab('cover-letter');
+          }
+          if (results.narrativeSections) {
+            setNarrativeResult(results.narrativeSections);
+            switchTab('narrative');
+          }
+          if (results.interviewQuestions) {
+            useFeatureStore.getState().setInterviewQuestions(results.interviewQuestions);
+            switchTab('interview');
+          }
+          if (results.linkedinOptimization) {
+            useFeatureStore.getState().setLinkedInResult(results.linkedinOptimization);
+            switchTab('linkedin');
+          }
+          if (results.practitionerReview) {
+            useFeatureStore.getState().setPractitionerResult(results.practitionerReview);
+            switchTab('practitioner');
+          }
         }}
       />
 

@@ -12,6 +12,7 @@ import { calculateScore } from './services/scoringEngine';
 import { researchCompany, researchJobRole, mergeResearchResults } from './services/companyResearchService';
 import { getOrCreateSessionCache, invalidateCache, type SessionCache } from './services/promptCache';
 import { toast } from 'sonner';
+import { useFeatureStore } from './stores/featureStore';
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.UPLOAD);
@@ -136,6 +137,7 @@ const App: React.FC = () => {
 
   const handleRestart = () => {
     track({ type: 'restart' });
+    useFeatureStore.getState().resetAll();
     setResult(null);
     setAnalysisStage('jd-analysis');
     setUserData({ resumeText: '', jobDescription: '', companyName: '', jobTitle: '', githubRepos: [{ url: '', description: '' }], githubData: undefined });

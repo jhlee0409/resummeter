@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { TailoredInstructionWithRequirements, GitHubFetchResult, CareerStatementResult, CompanyContext } from '../types';
-import { generateCareerStatements } from '../services/careerDocService';
+import { TailoredInstructionWithRequirements, GitHubFetchResult, CompanyContext } from '../types';
+import { useFeatureStore } from '../stores/featureStore';
 
 interface CareerStatementViewProps {
   resumeText: string;
@@ -18,33 +18,19 @@ export function CareerStatementView({
   githubData,
   companyContext,
 }: CareerStatementViewProps) {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<CareerStatementResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { result, loading, error } = useFeatureStore(s => s.careerStatement);
+  const generateCareerStatement = useFeatureStore(s => s.generateCareerStatement);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
-  const handleGenerate = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const generated = await generateCareerStatements(
-        resumeText,
-        jobDescription,
-        instruction,
-        githubData,
-        companyContext
-      );
-      setResult(generated);
-      // Auto-expand first statement
-      if (generated.statements.length > 0) {
-        setExpandedIds(new Set([generated.statements[0].id]));
-      }
-    } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      setError(errorMsg);
-    } finally {
-      setLoading(false);
+  // Auto-expand first statement when result changes
+  useEffect(() => {
+    if (result && result.statements.length > 0) {
+      setExpandedIds(new Set([result.statements[0].id]));
     }
+  }, [result]);
+
+  const handleGenerate = () => {
+    generateCareerStatement(resumeText, jobDescription, instruction, githubData, companyContext);
   };
 
   const copyToClipboard = (text: string) => {
