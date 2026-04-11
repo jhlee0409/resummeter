@@ -442,7 +442,11 @@ ${repoInfo ? `[GitHub 리포지토리 (evidence 작성용)]\n${repoInfo}\n` : ''
 각 analysisItem에 대해:
 1. before: 분석 결과의 before를 그대로 복사하십시오.
 2. suggestion: issue + direction을 2-3문장 코칭 지시("~하세요" 형태)로 확장하십시오.
-3. after: before 문장을 direction에 따라 표현만 개선하십시오. 새 기술/경험 삽입 시 반드시 [플레이스홀더]를 사용하십시오.
+3. after: before 문장을 direction에 따라 표현만 개선하십시오. 새 기술/경험 삽입 시 반드시 구체적인 예시가 포함된 [플레이스홀더]를 사용하십시오.
+   - BAD: "[적용한 아키텍처]" ← 너무 추상적
+   - GOOD: "[예: 마이크로 프론트엔드, 디자인 시스템, 모노레포 등 적용한 아키텍처]" ← 지원자가 바로 선택 가능
+   - BAD: "[비즈니스 문제]" ← 무엇을 써야 할지 모름
+   - GOOD: "[예: 이탈률 감소, 전환율 개선, 처리시간 단축 등 해결한 문제]" ← 구체적 방향 제시
 4. evidence: JD 원문 인용 또는 GitHub 데이터 인용을 근거로 제시하십시오.
 5. optimizedResume: 모든 after를 적용한 완성된 이력서 (Markdown 형식).
 
@@ -482,7 +486,7 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
           properties: {
             optimizedResume: { type: Type.STRING, description: "모든 after를 적용한 완성된 이력서 (Markdown)" },
             matchScore: { type: Type.NUMBER, description: "0-100. JD 필수 요구사항 대비 이력서 충족 비율" },
-            summary: { type: Type.STRING, description: "전체 분석 요약 2-3문장" },
+            summary: { type: Type.STRING, description: "전체 분석 요약 3문장: 1문장 강점 + 1문장 약점/보완 필요 영역 + 1문장 코칭 적용 시 기대 효과. 긍정만 쓰지 마십시오." },
             gapMap: {
               type: Type.ARRAY,
               items: {
