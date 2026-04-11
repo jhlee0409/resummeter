@@ -7,6 +7,8 @@ import { ReviewStep } from './components/ReviewStep';
 import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from './types';
 import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from './services/geminiService';
 import { track } from './services/analytics';
+import { getCachedAnalysis, setCachedAnalysis, clearAnalysisCache } from './services/analysisCache';
+import { toast } from 'sonner';
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.UPLOAD);
@@ -28,6 +30,21 @@ const App: React.FC = () => {
 
   const handleStartAnalysis = useCallback(async (freshGithubData?: GitHubFetchResult[]) => {
     const githubData = freshGithubData ?? userData.githubData;
+
+    // Cache check: 같은 이력서+JD 조합의 분석 결과가 있으면 즉시 복원
+    const cached = getCachedAnalysis(userData.resumeText, userData.jobDescription);
+    if (cached) {
+      setInstruction(cached.instruction);
+      setResult(cached.result);
+      if (cached.companyContext) {
+        setUserData(prev => ({ ...prev, companyContext: cached.companyContext }));
+      }
+      toast.success('이전 분석 결과를 불러왔습니다');
+      track({ type: 'analysis_complete', matchScore: cached.result.matchScore, durationMs: 0 });
+      setCurrentStep(AppStep.REVIEW);
+      return;
+    }
+
     const analysisStartTime = Date.now();
     track({
       type: 'analysis_start',
@@ -69,6 +86,8 @@ const App: React.FC = () => {
       }
 
       setResult(finalResult);
+      // Cache: 분석 결과 저장
+      setCachedAnalysis(userData.resumeText, userData.jobDescription, instruction, finalResult, userData.companyContext ?? null);
       track({ type: 'analysis_complete', matchScore: finalResult.matchScore, durationMs: Date.now() - analysisStartTime });
       setCurrentStep(AppStep.REVIEW);
     } catch (error) {

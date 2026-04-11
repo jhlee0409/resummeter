@@ -5,6 +5,7 @@ import { fetchAllRepos } from '../services/githubService';
 import { extractCompanyName, researchCompany } from '../services/companyResearchService';
 import { resumeTemplates, industries, type ResumeTemplate } from '../data/templates';
 import { track } from '../services/analytics';
+import { hasCachedAnalysis } from '../services/analysisCache';
 
 interface UploadStepProps {
   data: UserInputData;
@@ -771,7 +772,9 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }
               </>
             ) : (
               <>
-                AI 분석 시작
+                {isFormValid && hasCachedAnalysis(data.resumeText, data.jobDescription)
+                  ? '이전 결과 불러오기'
+                  : 'AI 분석 시작'}
                 <svg className={`w-4 h-4 transition-transform ${isFormValid ? 'group-hover:translate-x-0.5' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
