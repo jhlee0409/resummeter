@@ -74,7 +74,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       if (atsScore) setPrevAtsScore(atsScore.overall);
       setIsLoadingAts(true);
       try {
-        const newScore = await analyzeAtsScore(newResumeText, originalData.jobDescription, JSON.stringify(instruction));
+        const newScore = await analyzeAtsScore(newResumeText, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
         setAtsScore(newScore);
       } catch (e) {
         console.warn('ATS re-analysis failed:', e);
@@ -101,7 +101,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
         narrativeSpecs, instruction, originalData.resumeText,
         originalData.jobDescription, originalData.githubRepos,
         originalData.githubData, result,
-        (completed, total) => setNarrativeProgress({ completed, total })
+        (completed, total) => setNarrativeProgress({ completed, total }),
+        originalData.companyContext,
       );
       setNarrativeResult(narrativeGenResult);
     } finally {
@@ -115,7 +116,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     track({ type: 'ats_analyze' });
     setIsLoadingAts(true);
     try {
-      const score = await analyzeAtsScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction));
+      const score = await analyzeAtsScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
       setAtsScore(score);
     } catch (e) { console.error(e); }
     finally { setIsLoadingAts(false); }
@@ -126,7 +127,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     track({ type: 'detailed_score_analyze' });
     setIsLoadingDetailed(true);
     try {
-      const score = await analyzeDetailedScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction));
+      const score = await analyzeDetailedScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
       setDetailedScore(score);
     } catch (e) { console.error(e); }
     finally { setIsLoadingDetailed(false); }
@@ -530,6 +531,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 jobDescription={originalData.jobDescription}
                 instruction={instruction}
                 githubData={originalData.githubData}
+                companyContext={originalData.companyContext}
               />
             </Suspense>
           )}
@@ -542,6 +544,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 jobDescription={originalData.jobDescription}
                 instruction={instruction}
                 coachingResult={result}
+                companyContext={originalData.companyContext}
               />
             </Suspense>
           )}
@@ -553,6 +556,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 resumeText={originalData.resumeText}
                 jobDescription={originalData.jobDescription}
                 instruction={instruction}
+                companyContext={originalData.companyContext}
               />
             </Suspense>
           )}
@@ -564,6 +568,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 gapMap={result.gapMap}
                 jobDescription={originalData.jobDescription}
                 instruction={instruction}
+                companyContext={originalData.companyContext}
               />
             </Suspense>
           )}
@@ -575,6 +580,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 resumeText={originalData.resumeText}
                 jobDescription={originalData.jobDescription}
                 instruction={instruction}
+                companyContext={originalData.companyContext}
               />
             </Suspense>
           )}
@@ -616,6 +622,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 jobDescription={originalData.jobDescription}
                 instruction={instruction}
                 coachingResult={result}
+                companyContext={originalData.companyContext}
               />
             </Suspense>
           )}

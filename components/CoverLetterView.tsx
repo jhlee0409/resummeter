@@ -8,6 +8,7 @@ import {
   CoverLetterLength,
   CoverLetterLanguage,
   CoverLetterResult,
+  CompanyContext,
 } from '../types';
 import { generateCoverLetter } from '../services/careerDocService';
 
@@ -16,6 +17,7 @@ interface CoverLetterViewProps {
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
   coachingResult?: CoachingResult;
+  companyContext?: CompanyContext | null;
 }
 
 export function CoverLetterView({
@@ -23,6 +25,7 @@ export function CoverLetterView({
   jobDescription,
   instruction,
   coachingResult,
+  companyContext,
 }: CoverLetterViewProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CoverLetterResult | null>(null);
@@ -42,7 +45,8 @@ export function CoverLetterView({
         jobDescription,
         instruction,
         config,
-        coachingResult
+        coachingResult,
+        companyContext
       );
       setResult(generated);
     } catch (err: unknown) {

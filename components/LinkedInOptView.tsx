@@ -1,15 +1,16 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
-import type { TailoredInstructionWithRequirements, LinkedInOptimization } from "../types";
+import type { TailoredInstructionWithRequirements, LinkedInOptimization, CompanyContext } from "../types";
 import { generateLinkedInOptimization } from "../services/skillGapService";
 
 interface LinkedInOptViewProps {
   resumeText: string;
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
+  companyContext?: CompanyContext | null;
 }
 
-export default function LinkedInOptView({ resumeText, jobDescription, instruction }: LinkedInOptViewProps) {
+export default function LinkedInOptView({ resumeText, jobDescription, instruction, companyContext }: LinkedInOptViewProps) {
   const [optimization, setOptimization] = useState<LinkedInOptimization | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -17,7 +18,7 @@ export default function LinkedInOptView({ resumeText, jobDescription, instructio
     setLoading(true);
     setError(null);
     try {
-      const result = await generateLinkedInOptimization(resumeText, jobDescription, instruction);
+      const result = await generateLinkedInOptimization(resumeText, jobDescription, instruction, companyContext);
       setOptimization(result);
     } catch (err) {
       console.error("LinkedIn 최적화 생성 실패:", err);

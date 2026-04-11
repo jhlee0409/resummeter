@@ -1,8 +1,9 @@
 import { Type, ThinkingLevel } from "@google/genai";
-import { CoachingResult, GithubRepo, TailoredInstructionWithRequirements, GitHubFetchResult, JdRequirement, Evidence, EvidenceBank, GapMapItem, ActionItem, NarrativeFramework, NarrativeSectionSpec, NarrativeSectionResult, NarrativeGenerationResult, NarrativeAnalysis, KStarKBreakdown, TechNarrativeBreakdown } from "../types";
-import { getAI } from "./promptCache";
+import { CoachingResult, GithubRepo, TailoredInstructionWithRequirements, GitHubFetchResult, JdRequirement, Evidence, EvidenceBank, GapMapItem, ActionItem, NarrativeFramework, NarrativeSectionSpec, NarrativeSectionResult, NarrativeGenerationResult, NarrativeAnalysis, KStarKBreakdown, TechNarrativeBreakdown, CompanyContext } from "../types";
+import { formatCompanyContext } from './companyResearchService';
+import { getAI, applyCacheToConfig, type SessionCache } from "./promptCache";
 import { withRetry } from './retry';
-import { validateResumeInput, validateJDInput, safeParseJSON } from './validation';
+import { validateResumeInput, validateJDInput, safeParseJSON, validateOutput, AnalysisOutputSchema, CoachingOutputSchema } from './validation';
 import { classifyError } from './errors';
 import {
   SECURITY_RULE,
@@ -55,7 +56,7 @@ interface AnalysisItem {
 }
 
 interface AnalysisIntermediate {
-  matchScore: number;
+  matchScore?: number; // deprecated: Scoring Engine이 대체
   summary: string;
   gapMap: IntermediateGapItem[];
   analysisItems: AnalysisItem[];
@@ -66,7 +67,11 @@ interface AnalysisIntermediate {
 // Stage 1: JD 분석 (Flash) — Schema description 강화
 // ─────────────────────────────────────────────────────────────
 
-export async function generateTailoredInstruction(jobDescription: string): Promise<TailoredInstructionWithRequirements> {
+export async function generateTailoredInstruction(
+  jobDescription: string,
+  companyName?: string,
+  jobTitle?: string,
+): Promise<TailoredInstructionWithRequirements> {
   validateJDInput(jobDescription);
 
   // 업종 자동 감지
@@ -74,9 +79,13 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
   const detectedIndustry = detectIndustry(jobDescription);
   const industryContext = buildIndustryContext(detectedIndustry);
 
+  const companyLine = companyName ? `\n    [지원 회사] ${companyName}` : '';
+  const jobTitleLine = jobTitle ? `\n    [지원 직무] ${jobTitle}` : '';
+
   const metaPrompt = `
     당신은 세계 최고의 프롬프트 엔지니어이자 채용 컨설턴트입니다.
     아래의 [채용 공고(JD)]를 심층 분석하여, 이 포지션의 지원자를 평가할 **'AI 면접관의 페르소나'**와 **'이력서 최적화 가이드라인'**을 작성해주세요.
+    ${companyLine}${jobTitleLine}
 
     [입력 품질 가드]
     JD가 50자 미만이면 기본 페르소나와 빈 키워드 배열을 반환하십시오. 부족한 정보를 추론하지 마십시오.
@@ -96,6 +105,12 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
        - 각 항목에서 핵심 키워드 추출
        - 카테고리: hard-skill, soft-skill, experience, education
     6. **키워드 추출 원칙**: JD 원문에서 직접 등장하는 단어만 키워드로 추출하십시오. 유추하거나 확장한 키워드는 포함하지 마십시오.
+    7. **키워드 시맨틱 동의어(keywordAliases)**: 각 키워드에 대해 동일하거나 매우 유사한 기술/개념을 매핑하십시오.
+       - 예: "Fabric.js" → ["Canvas", "HTML5 Canvas", "캔버스"], "TypeScript" → ["TS"], "React Native" → ["RN", "리액트 네이티브"]
+       - 프레임워크 ↔ 기반 기술: "Next.js" → ["React", "SSR"], "NestJS" → ["Node.js", "Express"]
+       - 약어/한글 변환: "CI/CD" → ["지속적 통합", "GitHub Actions", "Jenkins"], "REST API" → ["RESTful", "API 개발"]
+       - 상위/하위 기술 관계: "Kubernetes" → ["K8s", "Docker", "컨테이너"], "GraphQL" → ["Apollo", "Relay"]
+       - 키워드당 2-5개 alias. 무관한 기술은 포함하지 마십시오.
   `;
 
   try {
@@ -112,6 +127,18 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
           properties: {
             persona: { type: Type.STRING, description: "채용 담당자 페르소나 (1-2문장)" },
             keywords: { type: Type.ARRAY, items: { type: Type.STRING }, description: "JD 원문에서 직접 추출한 키워드만 포함. 유추하거나 확장한 키워드는 포함하지 않음" },
+            keywordAliases: {
+              type: Type.ARRAY,
+              description: "각 키워드의 시맨틱 동의어/관련 기술 매핑",
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  keyword: { type: Type.STRING, description: "JD 원문 키워드 (keywords 배열의 항목과 동일)" },
+                  aliases: { type: Type.ARRAY, items: { type: Type.STRING }, description: "동의어/관련 기술 2-5개" },
+                },
+                required: ["keyword", "aliases"],
+              },
+            },
             evaluationCriteria: {
               type: Type.OBJECT,
               properties: {
@@ -144,7 +171,7 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
               },
             },
           },
-          required: ["persona", "keywords", "evaluationCriteria", "toneGuide", "jdRequirements"],
+          required: ["persona", "keywords", "keywordAliases", "evaluationCriteria", "toneGuide", "jdRequirements"],
         },
       },
     }));
@@ -218,7 +245,9 @@ async function analyzeResume(
   jobDescription: string,
   instruction: TailoredInstructionWithRequirements,
   githubRepos: GithubRepo[],
-  githubData?: GitHubFetchResult[]
+  githubData?: GitHubFetchResult[],
+  companyContext?: CompanyContext | null,
+  sessionCache?: SessionCache | null,
 ): Promise<AnalysisIntermediate> {
   validateResumeInput(resumeText);
   validateJDInput(jobDescription);
@@ -227,10 +256,12 @@ async function analyzeResume(
   const today = new Date().toISOString().split('T')[0];
   const { buildIndustryContext } = await import('./industryDetect');
   const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   const prompt = `[역할]
 당신은 이력서 분석 전문가입니다.
 ${industryContext}
+${companyBlock}
 
 [현재 날짜]
 ${today} — 이 날짜 기준으로 과거/현재/미래를 판단하십시오.
@@ -281,29 +312,32 @@ ${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}${HR_PER
 - weak는 "관련 경험이 있지만 구체적 증거/수치가 부족한 경우"에만 사용하십시오.`;
 
   try {
+    // Context Cache: 있으면 systemInstruction 대신 cachedContent 사용
+    const cacheFields = sessionCache?.cacheName
+      ? { cachedContent: sessionCache.cacheName }
+      : { systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n') };
     const response = await withRetry(() => getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+        ...cacheFields,
         temperature: 0.2,
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            matchScore: { type: Type.NUMBER, description: "0-100. JD 필수 요구사항 대비 이력서 충족 비율. 이력서에 없는 내용을 있는 것처럼 점수에 반영하지 않음" },
-            summary: { type: Type.STRING, description: "전체 분석 요약 2-3문장" },
-            gapMap: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  requirement: { type: Type.STRING, description: "JD 요구사항 원문" },
-                  category: { type: Type.STRING, description: "hard-skill, soft-skill, experience, education 중 하나" },
-                  currentLevel: { type: Type.STRING, description: "strong(이력서에 명확히 충족), weak(부분 충족), missing(전혀 언급 없음)" },
-                  jdMentions: { type: Type.NUMBER, description: "JD에서 이 요구사항 관련 언급 횟수" },
-                  resumeMentions: { type: Type.NUMBER, description: "이력서에서 이 요구사항 관련 언급 횟수" },
+        type: Type.OBJECT,
+        properties: {
+          summary: { type: Type.STRING, description: "전체 분석 요약 2-3문장" },
+          gapMap: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                requirement: { type: Type.STRING, description: "JD 요구사항 원문" },
+                category: { type: Type.STRING, description: "hard-skill, soft-skill, experience, education 중 하나" },
+                currentLevel: { type: Type.STRING, description: "strong(이력서에 명확히 충족), weak(부분 충족), missing(전혀 언급 없음)" },
+                jdMentions: { type: Type.NUMBER, description: "JD에서 이 요구사항 관련 언급 횟수" },
+                resumeMentions: { type: Type.NUMBER, description: "이력서에서 이 요구사항 관련 언급 횟수" },
                   suggestion: { type: Type.STRING, description: "이 gap에 대한 한 줄 개선 방향" },
                 },
                 required: ["requirement", "category", "currentLevel", "jdMentions", "resumeMentions", "suggestion"],
@@ -328,13 +362,15 @@ ${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}${HR_PER
             },
             quickWins: { type: Type.ARRAY, items: { type: Type.STRING }, description: "즉시 적용 가능한 개선 포인트 3-5개. 반드시 이력서에 이미 있는 내용의 표현 개선만 제안. 이력서에 없는 기술/경험/자격증을 추가하라는 제안 금지. 이름/연락처 같은 기본 정보 수정 제안 금지." },
           },
-          required: ["matchScore", "summary", "gapMap", "analysisItems", "quickWins"],
+          required: ["summary", "gapMap", "analysisItems", "quickWins"],
         },
       },
     }));
 
     const jsonText = response.text;
-    return safeParseJSON<AnalysisIntermediate>(jsonText, '이력서 분석');
+    const parsed = safeParseJSON<AnalysisIntermediate>(jsonText, '이력서 분석');
+    validateOutput(parsed, AnalysisOutputSchema, '이력서 분석');
+    return parsed;
   } catch (e) {
     throw classifyError(e);
   }
@@ -349,16 +385,20 @@ async function generateCoaching(
   resumeText: string,
   instruction: TailoredInstructionWithRequirements,
   githubRepos: GithubRepo[],
-  githubData?: GitHubFetchResult[]
+  githubData?: GitHubFetchResult[],
+  companyContext?: CompanyContext | null,
+  sessionCache?: SessionCache | null,
 ): Promise<CoachingResult> {
   const repoInfo = formatRepoInfo(githubRepos, githubData);
   const today = new Date().toISOString().split('T')[0];
   const { buildIndustryContext } = await import('./industryDetect');
   const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   const prompt = `[역할]
 당신은 이력서 코칭 전문가입니다.
 ${industryContext}
+${companyBlock}
 
 [현재 날짜]
 ${today} — 이 날짜 기준으로 과거/현재/미래를 판단하십시오.
@@ -441,14 +481,22 @@ ${resumeText}
 ${repoInfo ? `[GitHub 리포지토리 (evidence 작성용)]\n${repoInfo}\n` : ''}[생성 태스크]
 각 analysisItem에 대해:
 1. before: 분석 결과의 before를 그대로 복사하십시오.
-2. suggestion: issue + direction을 2-3문장 코칭 지시("~하세요" 형태)로 확장하십시오.
-3. after: before 문장을 direction에 따라 표현만 개선하십시오. 새 기술/경험 삽입 시 반드시 구체적인 예시가 포함된 [플레이스홀더]를 사용하십시오.
+2. **suggestion (필수)**: analysisItem의 issue + direction을 조합하여 2-3문장 코칭 지시("~하세요" 형태)로 작성하십시오. 이 필드를 빠뜨리지 마십시오.
+3. after: before 문장을 suggestion에 따라 표현만 개선하십시오. 새 기술/경험 삽입 시 반드시 구체적인 예시가 포함된 [플레이스홀더]를 사용하십시오.
    - BAD: "[적용한 아키텍처]" ← 너무 추상적
    - GOOD: "[예: 마이크로 프론트엔드, 디자인 시스템, 모노레포 등 적용한 아키텍처]" ← 지원자가 바로 선택 가능
    - BAD: "[비즈니스 문제]" ← 무엇을 써야 할지 모름
    - GOOD: "[예: 이탈률 감소, 전환율 개선, 처리시간 단축 등 해결한 문제]" ← 구체적 방향 제시
 4. evidence: JD 원문 인용 또는 GitHub 데이터 인용을 근거로 제시하십시오.
 5. optimizedResume: 모든 after를 적용한 완성된 이력서 (Markdown 형식).
+
+[insights 작성 규칙]
+insights 배열의 각 항목은 반드시 다음 필드를 포함:
+- source: 근거 출처 (이력서 문장 인용)
+- confidence: verified | analyzed | inferred
+- category: documentation | problem-solving | collaboration | technical | soft-skill
+- **observation (필수)**: 발견한 강점/약점 요약 (1-2문장)
+- **impact (필수)**: 이 관찰이 지원자의 적합도에 미치는 영향 (1문장)
 
 [톤 가이드]
 - 스타일: ${instruction.toneGuide.style}
@@ -472,12 +520,16 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
 3. evidence.content가 실제 JD 원문 또는 GitHub 데이터에서 확인 가능한가?
 위반 항목이 있으면 해당 항목을 수정한 후 최종 결과를 반환하십시오.`;
 
+  const coachCacheFields = sessionCache?.cacheName
+    ? { cachedContent: sessionCache.cacheName }
+    : { systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n') };
+
   try {
     const response = await withRetry(() => getAI().models.generateContent({
       model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+        ...coachCacheFields,
         temperature: 0.3,
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
@@ -485,7 +537,6 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
           type: Type.OBJECT,
           properties: {
             optimizedResume: { type: Type.STRING, description: "모든 after를 적용한 완성된 이력서 (Markdown)" },
-            matchScore: { type: Type.NUMBER, description: "0-100. JD 필수 요구사항 대비 이력서 충족 비율" },
             summary: { type: Type.STRING, description: "전체 분석 요약 3문장: 1문장 강점 + 1문장 약점/보완 필요 영역 + 1문장 코칭 적용 시 기대 효과. 긍정만 쓰지 마십시오." },
             gapMap: {
               type: Type.ARRAY,
@@ -549,36 +600,38 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
               },
             },
           },
-          required: ["optimizedResume", "matchScore", "summary", "gapMap", "actionItems", "quickWins", "insights"],
+          required: ["optimizedResume", "summary", "gapMap", "actionItems", "quickWins", "insights"],
         },
       },
     }));
 
     const jsonText = response.text;
-    return safeParseJSON<CoachingResult>(jsonText, '코칭 생성');
+    const parsed = safeParseJSON<CoachingResult>(jsonText, '코칭 생성');
+    validateOutput(parsed, CoachingOutputSchema, '코칭 생성');
+    return parsed;
 
   } catch (error: unknown) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     if (errorMsg.includes('schema') || errorMsg.includes('depth')) {
       console.warn("Nested schema failed, trying fallback schema...");
-      return generateCoachingWithFallbackSchema(prompt);
+      return generateCoachingWithFallbackSchema(prompt, coachCacheFields);
     }
     throw classifyError(error);
   }
 }
 
 // Fallback: flatten evidence out of actionItems (schema depth 에러 대비)
-async function generateCoachingWithFallbackSchema(prompt: string): Promise<CoachingResult> {
+async function generateCoachingWithFallbackSchema(prompt: string, cacheOverride?: Record<string, unknown>): Promise<CoachingResult> {
   const response = await getAI().models.generateContent({
     model: 'gemini-3-pro-preview',
     contents: prompt,
     config: {
+      ...(cacheOverride || {}),
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
         properties: {
           optimizedResume: { type: Type.STRING },
-          matchScore: { type: Type.NUMBER },
           summary: { type: Type.STRING },
           gapMap: {
             type: Type.ARRAY,
@@ -644,7 +697,7 @@ async function generateCoachingWithFallbackSchema(prompt: string): Promise<Coach
             },
           },
         },
-        required: ["optimizedResume", "matchScore", "summary", "gapMap", "actionItems", "evidenceList", "quickWins", "insights"],
+        required: ["optimizedResume", "summary", "gapMap", "actionItems", "evidenceList", "quickWins", "insights"],
       },
     },
   });
@@ -713,15 +766,17 @@ export const coachResume = async (
   instruction: TailoredInstructionWithRequirements,
   githubRepos: GithubRepo[],
   githubData?: GitHubFetchResult[],
-  onStageChange?: (stage: 'resume-analysis' | 'coaching') => void
+  onStageChange?: (stage: 'resume-analysis' | 'coaching') => void,
+  companyContext?: CompanyContext | null,
+  sessionCache?: SessionCache | null,
 ): Promise<CoachingResult> => {
   // Stage 2a: 분석
   onStageChange?.('resume-analysis');
-  const analysis = await analyzeResume(resumeText, jobDescription, instruction, githubRepos, githubData);
+  const analysis = await analyzeResume(resumeText, jobDescription, instruction, githubRepos, githubData, companyContext, sessionCache);
 
   // Stage 2b: 코칭 생성
   onStageChange?.('coaching');
-  const result = await generateCoaching(analysis, resumeText, instruction, githubRepos, githubData);
+  const result = await generateCoaching(analysis, resumeText, instruction, githubRepos, githubData, companyContext, sessionCache);
 
   // Backfill relatedActions using analysis intermediate data
   const enrichedGapMap = backfillRelatedActions(result.gapMap, result.actionItems, analysis.analysisItems);
@@ -730,7 +785,7 @@ export const coachResume = async (
   return {
     ...result,
     gapMap: enrichedGapMap,
-    matchScore: analysis.matchScore,
+    matchScore: 0, // Scoring Engine이 규칙 기반으로 재계산
     summary: analysis.summary || result.summary,
     quickWins: analysis.quickWins.length > 0 ? analysis.quickWins : result.quickWins,
   };
@@ -1064,7 +1119,7 @@ ${coachingContext}
 [자기 검증]
 작성 완료 후 검증하십시오:
 1. 이력서에 없는 경험/기술/수치가 본문에 포함되었는가? → [플레이스홀더]로 교체
-2. 문장 길이가 균일하지 않은가? (짧은/긴 문장이 섞여 있어야 함)
+2. 문장 길이 변화: 가장 짧은 문장 ≤ 20자, 가장 긴 문장 ≥ 60자인가? 아니면 문장을 분리하거나 합쳐서 길이 변화를 만드십시오.
 3. "활용하여", "기반으로", "통해", "바탕으로"가 각 1회 이하인가?`;
 }
 
@@ -1180,8 +1235,11 @@ async function analyzeNarrativeSection(
   githubRepos: GithubRepo[],
   githubData?: GitHubFetchResult[],
   coachingResult?: CoachingResult,
+  companyContext?: CompanyContext | null,
+  usedExperiences?: string[],
 ): Promise<NarrativeAnalysis> {
   const repoInfo = formatRepoInfo(githubRepos, githubData);
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
   const question = spec.type === 'custom'
     ? (spec.customTitle || '자유 주제')
     : SECTION_TYPE_LABELS[spec.type];
@@ -1190,10 +1248,15 @@ async function analyzeNarrativeSection(
     ? `\n[코칭 분석 결과]\n- 매칭 점수: ${coachingResult.matchScore}/100\n- 요약: ${coachingResult.summary}\n- 주요 갭:\n${coachingResult.gapMap.slice(0, 5).map(g => `  - [${g.currentLevel}] ${g.requirement}: ${g.suggestion}`).join('\n')}`
     : '';
 
+  const usedBlock = usedExperiences?.length
+    ? `\n[이미 사용된 경험 — 반드시 다른 경험을 선택하십시오]\n${usedExperiences.map((e, i) => `${i + 1}. ${e}`).join('\n')}\n위 경험은 다른 항목에서 이미 사용되었습니다. 같은 프로젝트/에피소드를 선택하지 마십시오. 이력서에서 다른 경험을 찾으십시오.\n`
+    : '';
+
   const prompt = `[역할]
 당신은 한국 대기업 자기소개서 전략 분석가입니다.
 서술형 질문을 해체하고, 이력서에서 최적의 경험을 선별하여 글의 설계도(아웃라인)를 작성합니다.
-
+${companyBlock}
+${usedBlock}
 [서술형 질문]
 <user-input>
 ${question}
@@ -1278,6 +1341,7 @@ function buildWritingPrompt(
   analysis: NarrativeAnalysis,
   spec: NarrativeSectionSpec,
   resumeText: string,
+  companyBlock: string = '',
 ): string {
   const question = spec.type === 'custom'
     ? (spec.customTitle || '자유 주제')
@@ -1332,6 +1396,7 @@ K(가능성): ${ol.potential}`
 당신은 한국 자기소개서 작성 전문가입니다.
 아래 [아웃라인]을 바탕으로 하나의 완성된 글을 작성하십시오.
 분석이나 경험 선별은 이미 완료되었습니다. 당신의 임무는 오직 좋은 글을 쓰는 것입니다.
+${companyBlock}
 
 [질문]
 ${question}
@@ -1413,8 +1478,10 @@ async function writeNarrativeFromAnalysis(
   analysis: NarrativeAnalysis,
   spec: NarrativeSectionSpec,
   resumeText: string,
+  companyContext?: CompanyContext | null,
 ): Promise<{ title: string; content: string; charCount: number; keywordsUsed: string[]; githubEvidences: string[]; kStarKBreakdown?: KStarKBreakdown; techNarrativeBreakdown?: TechNarrativeBreakdown }> {
-  const prompt = buildWritingPrompt(analysis, spec, resumeText);
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
+  const prompt = buildWritingPrompt(analysis, spec, resumeText, companyBlock);
   const responseSchema = spec.framework === 'k-star-k' ? K_STAR_K_RESPONSE_SCHEMA : TECH_NARRATIVE_RESPONSE_SCHEMA;
 
   const response = await withRetry(() => getAI().models.generateContent({
@@ -1445,17 +1512,19 @@ export async function generateNarrativeSection(
   githubRepos: GithubRepo[],
   githubData?: GitHubFetchResult[],
   coachingResult?: CoachingResult,
+  companyContext?: CompanyContext | null,
+  usedExperiences?: string[],
 ): Promise<NarrativeSectionResult> {
   const sectionLabel = spec.type === 'custom' ? (spec.customTitle || '사용자 정의') : SECTION_TYPE_LABELS[spec.type];
 
   try {
     // Stage 4a: 분석 (Flash)
     const analysis = await analyzeNarrativeSection(
-      spec, instruction, resumeText, jobDescription, githubRepos, githubData, coachingResult
+      spec, instruction, resumeText, jobDescription, githubRepos, githubData, coachingResult, companyContext, usedExperiences
     );
 
     // Stage 4b: 생성 (Pro)
-    const written = await writeNarrativeFromAnalysis(analysis, spec, resumeText);
+    const written = await writeNarrativeFromAnalysis(analysis, spec, resumeText, companyContext);
 
     return {
       specId: spec.id,
@@ -1500,14 +1569,20 @@ export async function generateNarrativeSections(
   githubData?: GitHubFetchResult[],
   coachingResult?: CoachingResult,
   onProgress?: (completedIndex: number, total: number) => void,
+  companyContext?: CompanyContext | null,
 ): Promise<NarrativeGenerationResult> {
   const sections: NarrativeSectionResult[] = [];
+  const usedExperiences: string[] = [];
 
   for (let i = 0; i < specs.length; i++) {
     const result = await generateNarrativeSection(
-      specs[i], instruction, resumeText, jobDescription, githubRepos, githubData, coachingResult
+      specs[i], instruction, resumeText, jobDescription, githubRepos, githubData, coachingResult, companyContext, usedExperiences
     );
     sections.push(result);
+    // 사용된 경험을 누적하여 다음 섹션에서 다른 경험 선택 유도
+    if (result.status === 'success' && result.title) {
+      usedExperiences.push(result.title);
+    }
     onProgress?.(i + 1, specs.length);
 
     // 500ms delay between requests to avoid rate limiting (skip after last)

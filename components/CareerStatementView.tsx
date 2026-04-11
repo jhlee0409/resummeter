@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import * as Collapsible from '@radix-ui/react-collapsible';
-import { TailoredInstructionWithRequirements, GitHubFetchResult, CareerStatementResult } from '../types';
+import { TailoredInstructionWithRequirements, GitHubFetchResult, CareerStatementResult, CompanyContext } from '../types';
 import { generateCareerStatements } from '../services/careerDocService';
 
 interface CareerStatementViewProps {
@@ -8,6 +8,7 @@ interface CareerStatementViewProps {
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
   githubData?: GitHubFetchResult[];
+  companyContext?: CompanyContext | null;
 }
 
 export function CareerStatementView({
@@ -15,6 +16,7 @@ export function CareerStatementView({
   jobDescription,
   instruction,
   githubData,
+  companyContext,
 }: CareerStatementViewProps) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CareerStatementResult | null>(null);
@@ -29,7 +31,8 @@ export function CareerStatementView({
         resumeText,
         jobDescription,
         instruction,
-        githubData
+        githubData,
+        companyContext
       );
       setResult(generated);
       // Auto-expand first statement

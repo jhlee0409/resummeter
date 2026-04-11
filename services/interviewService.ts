@@ -1,5 +1,5 @@
 import { Type, ThinkingLevel } from "@google/genai";
-import { InterviewQuestion, InterviewFeedback, TailoredInstructionWithRequirements } from "../types";
+import { InterviewQuestion, InterviewFeedback, TailoredInstructionWithRequirements, CompanyContext } from "../types";
 import { getAI } from "./promptCache";
 import {
   SECURITY_RULE,
@@ -8,6 +8,7 @@ import {
   HR_PERSPECTIVE_INTERVIEW,
   formatInstruction,
 } from "./promptBlocks";
+import { formatCompanyContext } from './companyResearchService';
 import { withRetry } from './retry';
 import { validateResumeInput, validateJDInput, safeParseJSON } from './validation';
 import { classifyError } from './errors';
@@ -19,15 +20,18 @@ import { classifyError } from './errors';
 export async function generateInterviewQuestions(
   resumeText: string,
   jobDescription: string,
-  instruction: TailoredInstructionWithRequirements
+  instruction: TailoredInstructionWithRequirements,
+  companyContext?: CompanyContext | null,
 ): Promise<InterviewQuestion[]> {
   validateResumeInput(resumeText);
   validateJDInput(jobDescription);
 
   const today = new Date().toISOString().split('T')[0];
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   const prompt = `[역할]
 당신은 한국 IT 기업의 면접관입니다. 이력서와 채용 공고를 분석하여 실전 모의 면접 질문을 생성해주세요.
+${companyBlock}
 이력서에 언급되지 않은 기술이나 경험을 질문에 포함하지 마십시오.
 
 [현재 날짜]

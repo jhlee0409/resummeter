@@ -8,7 +8,7 @@ import { getAI } from './promptCache';
 import { withRetry } from './retry';
 import { validateResumeInput, validateJDInput, safeParseJSON } from './validation';
 import { classifyError } from './errors';
-import { SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY } from './promptBlocks';
+import { SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS } from './promptBlocks';
 import { formatCompanyContext } from './companyResearchService';
 import type { CompanyContext, GapAnalysisResult, GapMatch, TailoredInstructionWithRequirements } from '../types';
 
@@ -98,7 +98,7 @@ BAD (피하세요):
       model: 'gemini-3-pro-preview',
       contents: prompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+        systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS].join('\n\n'),
         temperature: 0.2,
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: 'application/json',
@@ -140,6 +140,18 @@ BAD (피하세요):
     }>(jsonText, '역량 갭 분석');
 
     const matches = parsed.matches || [];
+    // evidence 검증: LLM이 인용한 증거가 실제 이력서에 있는지 확인
+    const resumeLower = resumeText.toLowerCase();
+    for (const m of matches) {
+      if (m.matched && m.evidence) {
+        const evidenceWords = m.evidence.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+        const foundRatio = evidenceWords.filter(w => resumeLower.includes(w)).length / Math.max(evidenceWords.length, 1);
+        if (foundRatio < 0.5) {
+          m.evidence = `[확인 필요] ${m.evidence}`;
+        }
+      }
+    }
+
     const totalCount = matches.length;
     const matchedCount = matches.filter(m => m.matched).length;
     const requiredItems = matches.filter(m => m.severity === 'required');

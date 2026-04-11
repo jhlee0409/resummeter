@@ -1,5 +1,6 @@
 import { Type, ThinkingLevel } from "@google/genai";
-import type { AtsScore, DetailedScore } from "../types";
+import type { AtsScore, DetailedScore, CompanyContext } from "../types";
+import { formatCompanyContext } from './companyResearchService';
 import { getAI } from "./promptCache";
 import {
   SECURITY_RULE,
@@ -18,13 +19,16 @@ import { classifyError } from './errors';
 export async function analyzeAtsScore(
   resumeText: string,
   jobDescription: string,
-  instruction: string
+  instruction: string,
+  companyContext?: CompanyContext | null,
 ): Promise<AtsScore> {
   validateResumeInput(resumeText);
   validateJDInput(jobDescription);
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   try {
     const prompt = `당신은 ATS(Applicant Tracking System) 전문가입니다.
+${companyBlock}
 
 다음 이력서를 채용 공고(JD)와 비교하여 ATS 관점에서 분석하세요.
 
@@ -193,13 +197,16 @@ JSON 스키마에 맞춰 반환하세요.
 export async function analyzeDetailedScore(
   resumeText: string,
   jobDescription: string,
-  instruction: string
+  instruction: string,
+  companyContext?: CompanyContext | null,
 ): Promise<DetailedScore> {
   validateResumeInput(resumeText);
   validateJDInput(jobDescription);
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   try {
     const prompt = `당신은 이력서 코칭 전문가입니다.
+${companyBlock}
 
 다음 이력서를 상세히 분석하여 섹션별 점수, Action Verb 분석, 정량화 분석, STAR 구조 분석을 수행하세요.
 

@@ -1,11 +1,12 @@
 import React, { useState } from "react";
-import type { GapMapItem, TailoredInstructionWithRequirements, LearningRoadmap, SkillGapItem } from "../types";
+import type { GapMapItem, TailoredInstructionWithRequirements, LearningRoadmap, SkillGapItem, CompanyContext } from "../types";
 import { analyzeLearningRoadmap } from "../services/skillGapService";
 
 interface SkillGapViewProps {
   gapMap: GapMapItem[];
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
+  companyContext?: CompanyContext | null;
 }
 
 const priorityColors = {
@@ -50,7 +51,7 @@ const platformLabels: Record<string, string> = {
   docs: "공식문서",
 };
 
-export default function SkillGapView({ gapMap, jobDescription, instruction }: SkillGapViewProps) {
+export default function SkillGapView({ gapMap, jobDescription, instruction, companyContext }: SkillGapViewProps) {
   const [roadmap, setRoadmap] = useState<LearningRoadmap | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +60,7 @@ export default function SkillGapView({ gapMap, jobDescription, instruction }: Sk
     setLoading(true);
     setError(null);
     try {
-      const result = await analyzeLearningRoadmap(gapMap, jobDescription, instruction);
+      const result = await analyzeLearningRoadmap(gapMap, jobDescription, instruction, companyContext);
       setRoadmap(result);
     } catch (err) {
       console.error("학습 로드맵 생성 실패:", err);

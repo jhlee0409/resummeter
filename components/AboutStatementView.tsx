@@ -5,6 +5,7 @@ import {
   CoachingResult,
   AboutStatementResult,
   AboutStatementVersion,
+  CompanyContext,
 } from '../types';
 import { refineAboutStatement } from '../services/careerDocService';
 
@@ -13,6 +14,7 @@ interface AboutStatementViewProps {
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
   coachingResult?: CoachingResult;
+  companyContext?: CompanyContext | null;
 }
 
 const TONE_COLORS: Record<string, { gradient: string; border: string; badge: string }> = {
@@ -38,6 +40,7 @@ export function AboutStatementView({
   jobDescription,
   instruction,
   coachingResult,
+  companyContext,
 }: AboutStatementViewProps) {
   const [inputStatement, setInputStatement] = useState('');
   const [loading, setLoading] = useState(false);
@@ -57,7 +60,8 @@ export function AboutStatementView({
         resumeText,
         jobDescription,
         instruction,
-        coachingResult
+        coachingResult,
+        companyContext
       );
       setResult(generated);
     } catch (err: unknown) {

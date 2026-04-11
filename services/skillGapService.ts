@@ -6,7 +6,9 @@ import type {
   SkillGapItem,
   LearningResource,
   LinkedInOptimization,
+  CompanyContext,
 } from "../types";
+import { formatCompanyContext } from './companyResearchService';
 import { getAI } from "./promptCache";
 import {
   RESUME_HIERARCHY,
@@ -25,13 +27,16 @@ import { classifyError } from './errors';
 export async function analyzeLearningRoadmap(
   gapMap: GapMapItem[],
   jobDescription: string,
-  instruction: TailoredInstructionWithRequirements
+  instruction: TailoredInstructionWithRequirements,
+  companyContext?: CompanyContext | null,
 ): Promise<LearningRoadmap> {
   // missing/weak 항목만 필터링
   const gaps = gapMap.filter((item) => item.currentLevel === "missing" || item.currentLevel === "weak");
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   const prompt = `
 당신은 개발자 커리어 코칭 전문가입니다.
+${companyBlock}
 
 # 입력 정보
 ## 채용 공고
@@ -167,12 +172,15 @@ ${JSON.stringify(instruction, null, 2)}
 export async function generateLinkedInOptimization(
   resumeText: string,
   _jobDescription: string,
-  _instruction: TailoredInstructionWithRequirements
+  _instruction: TailoredInstructionWithRequirements,
+  companyContext?: CompanyContext | null,
 ): Promise<LinkedInOptimization> {
   validateResumeInput(resumeText);
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   const prompt = `
 당신은 LinkedIn 프로필 최적화 전문가입니다.
+${companyBlock}
 
 # 입력 정보
 ## 이력서

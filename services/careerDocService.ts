@@ -9,7 +9,9 @@ import {
   CoachingResult,
   AboutStatementResult,
   AboutStatementVersion,
+  CompanyContext,
 } from "../types";
+import { formatCompanyContext } from './companyResearchService';
 import { formatRepoInfo } from "./geminiService";
 import { getAI } from "./promptCache";
 import {
@@ -34,13 +36,15 @@ export async function generateCareerStatements(
   resumeText: string,
   jobDescription: string,
   instruction: TailoredInstructionWithRequirements,
-  githubData?: GitHubFetchResult[]
+  githubData?: GitHubFetchResult[],
+  companyContext?: CompanyContext | null,
 ): Promise<CareerStatementResult> {
   const today = new Date().toISOString().split('T')[0];
   const repoInfo = githubData ? formatRepoInfo(
     githubData.filter(d => d.status === 'success').map(d => ({ url: d.repoUrl, description: '' })),
     githubData
   ) : '';
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   validateResumeInput(resumeText);
   validateJDInput(jobDescription);
@@ -48,6 +52,7 @@ export async function generateCareerStatements(
   const prompt = `[역할]
 당신은 한국 공공기관 및 대기업 채용 프로세스 전문가입니다.
 STAR 구조 기반 경력기술서 작성에 특화되어 있으며, NCS 블라인드 채용 형식에 정통합니다.
+${companyBlock}
 
 [현재 날짜]
 ${today}
@@ -202,7 +207,8 @@ export async function generateCoverLetter(
   jobDescription: string,
   instruction: TailoredInstructionWithRequirements,
   config: CoverLetterConfig,
-  coachingResult?: CoachingResult
+  coachingResult?: CoachingResult,
+  companyContext?: CompanyContext | null,
 ): Promise<CoverLetterResult> {
   const today = new Date().toISOString().split('T')[0];
   const isKorean = config.language === 'ko';
@@ -212,6 +218,8 @@ export async function generateCoverLetter(
   const coachingContext = coachingResult
     ? `\n[분석 요약]\n- 매칭 점수: ${coachingResult.matchScore}/100\n- 요약: ${coachingResult.summary}\n- 주요 강점:\n${coachingResult.gapMap.filter(g => g.currentLevel === 'strong').slice(0, 3).map(g => `  - ${g.requirement}`).join('\n')}\n- 개선이 필요한 영역:\n${coachingResult.gapMap.filter(g => g.currentLevel === 'weak' || g.currentLevel === 'missing').slice(0, 3).map(g => `  - ${g.requirement}: ${g.suggestion}`).join('\n')}`
     : '';
+
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   validateResumeInput(resumeText);
   validateJDInput(jobDescription);
@@ -255,6 +263,7 @@ Required Elements:
     ? `[역할]
 당신은 한국 IT 기업 채용 전문가입니다.
 지원동기서 작성에 특화되어 있으며, JD 요구사항과 지원자 경험의 연결점을 자연스럽게 풀어내는 전문가입니다.
+${companyBlock}
 
 [현재 날짜]
 ${today}
@@ -297,6 +306,7 @@ ${coachingContext}
     : `[Role]
 You are an expert in crafting compelling cover letters for IT positions.
 You specialize in connecting candidate experiences with job requirements in a natural, persuasive manner.
+${companyBlock}
 
 [Current Date]
 ${today}
@@ -418,11 +428,13 @@ export async function refineAboutStatement(
   resumeText: string,
   _jobDescription: string,
   _instruction: TailoredInstructionWithRequirements,
-  coachingResult?: CoachingResult
+  coachingResult?: CoachingResult,
+  companyContext?: CompanyContext | null,
 ): Promise<AboutStatementResult> {
   validateResumeInput(resumeText);
 
   const today = new Date().toISOString().split('T')[0];
+  const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   const strengthsContext = coachingResult
     ? coachingResult.gapMap
@@ -436,6 +448,7 @@ export async function refineAboutStatement(
 당신은 개인 브랜딩 전문가입니다.
 이력서를 분석하여 그 사람을 가장 잘 표현하는 한 줄 자기소개를 다듬는 전문가입니다.
 특정 채용 공고에 맞추지 않고, 범용적으로 본인의 핵심 역량과 차별점을 드러내는 것이 목표입니다.
+${companyBlock}
 
 [현재 날짜]
 ${today}

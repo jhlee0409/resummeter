@@ -9,6 +9,8 @@ import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from './
 import { track } from './services/analytics';
 import { getCachedAnalysis, setCachedAnalysis, clearAnalysisCache } from './services/analysisCache';
 import { calculateScore } from './services/scoringEngine';
+import { researchCompany, researchJobRole, mergeResearchResults } from './services/companyResearchService';
+import { getOrCreateSessionCache, invalidateCache, type SessionCache } from './services/promptCache';
 import { toast } from 'sonner';
 
 const App: React.FC = () => {
@@ -17,6 +19,8 @@ const App: React.FC = () => {
   const [userData, setUserData] = useState<UserInputData>({
     resumeText: '',
     jobDescription: '',
+    companyName: '',
+    jobTitle: '',
     githubRepos: [{ url: '', description: '' }],
     githubData: undefined,
   });
@@ -57,10 +61,34 @@ const App: React.FC = () => {
     setAnalysisStage('jd-analysis');
 
     try {
-      // Stage 1: JD 분석
-      const instructionResult = await generateTailoredInstruction(userData.jobDescription);
+      // Stage 0 (리서치) + Stage 1 (JD 분석) 병렬 실행
+      const hasCompany = userData.companyName.trim().length >= 2;
+      const hasJobTitle = userData.jobTitle.trim().length >= 2;
+
+      const [instructionResult, companyInfo, jobRoleInfo] = await Promise.all([
+        // Stage 1: JD 분석
+        generateTailoredInstruction(userData.jobDescription, userData.companyName || undefined, userData.jobTitle || undefined),
+        // Stage 0a: 회사 리서치 (Flash Lite)
+        hasCompany
+          ? researchCompany(userData.companyName.trim()).catch(() => null)
+          : Promise.resolve(null),
+        // Stage 0b: 직무 리서치 (Flash Lite)
+        hasJobTitle
+          ? researchJobRole(userData.jobTitle.trim(), hasCompany ? userData.companyName.trim() : undefined).catch(() => null)
+          : Promise.resolve(null),
+      ]);
+
       setInstruction(instructionResult);
       const instruction = instructionResult;
+
+      // 리서치 결과 합성
+      const companyContext = mergeResearchResults(companyInfo, jobRoleInfo);
+      if (companyContext) {
+        setUserData(prev => ({ ...prev, companyContext }));
+      }
+
+      // Context Caching: 공통 컨텍스트를 Gemini 서버에 캐싱
+      const sessionCache = await getOrCreateSessionCache('pro', userData.resumeText, userData.jobDescription, instruction).catch(() => null);
 
       // Stage 2a+2b: 분석 → 코칭 생성 (내부에서 stage 전환)
       const coachingResult = await coachResume(
@@ -69,7 +97,9 @@ const App: React.FC = () => {
         instruction,
         userData.githubRepos,
         githubData,
-        (stage) => setAnalysisStage(stage)
+        (stage) => setAnalysisStage(stage),
+        companyContext,
+        sessionCache,
       );
 
       // Stage 3: Evidence Bank (optional)
@@ -87,7 +117,7 @@ const App: React.FC = () => {
       }
 
       // Scoring Engine: LLM 점수 대신 규칙 기반 점수로 대체
-      const scoring = calculateScore(finalResult.gapMap, instruction, userData.resumeText, userData.jobDescription);
+      const scoring = calculateScore(finalResult.gapMap, instruction, userData.resumeText, userData.jobDescription, companyContext);
       const scoredResult = { ...finalResult, matchScore: scoring.matchScore, scoringResult: scoring };
 
       setResult(scoredResult);
@@ -95,6 +125,8 @@ const App: React.FC = () => {
       setCachedAnalysis(userData.resumeText, userData.jobDescription, instruction, scoredResult, userData.companyContext ?? null);
       track({ type: 'analysis_complete', matchScore: scoring.matchScore, durationMs: Date.now() - analysisStartTime });
       setCurrentStep(AppStep.REVIEW);
+      // Context Cache 정리 (TTL 30분이지만 세션 종료 시 즉시 삭제)
+      invalidateCache().catch(() => {});
     } catch (error) {
       console.error(error);
       alert("AI 분석 중 오류가 발생했습니다. API 키와 입력값을 확인해주세요.");
@@ -106,7 +138,7 @@ const App: React.FC = () => {
     track({ type: 'restart' });
     setResult(null);
     setAnalysisStage('jd-analysis');
-    setUserData({ resumeText: '', jobDescription: '', githubRepos: [{ url: '', description: '' }], githubData: undefined });
+    setUserData({ resumeText: '', jobDescription: '', companyName: '', jobTitle: '', githubRepos: [{ url: '', description: '' }], githubData: undefined });
     setCurrentStep(AppStep.UPLOAD);
   };
 

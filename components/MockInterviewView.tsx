@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from "react";
 import * as Tabs from '@radix-ui/react-tabs';
 import * as Progress from '@radix-ui/react-progress';
-import { TailoredInstructionWithRequirements, InterviewQuestion, InterviewFeedback } from "../types";
+import { TailoredInstructionWithRequirements, InterviewQuestion, InterviewFeedback, CompanyContext } from "../types";
 import { generateInterviewQuestions, evaluateAnswer } from "../services/interviewService";
 
 interface MockInterviewViewProps {
   resumeText: string;
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
+  companyContext?: CompanyContext | null;
 }
 
 type InterviewStep = 'idle' | 'generating' | 'answering' | 'feedback';
 
-export default function MockInterviewView({ resumeText, jobDescription, instruction }: MockInterviewViewProps) {
+export default function MockInterviewView({ resumeText, jobDescription, instruction, companyContext }: MockInterviewViewProps) {
   const [step, setStep] = useState<InterviewStep>('idle');
   const [questions, setQuestions] = useState<InterviewQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -37,7 +38,7 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
     setStep('generating');
     setError(null);
     try {
-      const generatedQuestions = await generateInterviewQuestions(resumeText, jobDescription, instruction);
+      const generatedQuestions = await generateInterviewQuestions(resumeText, jobDescription, instruction, companyContext);
       setQuestions(generatedQuestions);
       setStep('answering');
       setCurrentQuestionIndex(0);
