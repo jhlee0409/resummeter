@@ -44,6 +44,8 @@ pnpm preview         # 빌드 결과 미리보기
 - **이력서 템플릿**: `data/templates.ts`에 8종 (IT/금융/제조/공공 × 신입/경력). UploadStep에서 선택.
 - **합격 사례 DB**: `data/examples.ts`에 9건 업종별 합격 자소서 패턴. ExampleBrowserView로 조회.
 - **분석 로그**: `services/analytics.ts`에 16개 이벤트 타입. localStorage 저장, 향후 Amplitude/Posthog 연동 가능.
+- **회사 컨텍스트**: `services/companyResearchService.ts`. Gemini Google Search grounding으로 회사 정보 자동 수집. `CompanyContext` 타입.
+- **역량 갭 분석**: `services/gapAnalysisService.ts`. 이력서 vs JD+회사컨텍스트 역량 매칭/갭 정밀 분석. `GapAnalysisView` 컴포넌트.
 
 ## 프롬프트 엔지니어링
 

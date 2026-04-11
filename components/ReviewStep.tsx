@@ -29,6 +29,7 @@ const VersionManagerView = lazy(() => import('./VersionManagerView'));
 const AboutStatementView = lazy(() => import('./AboutStatementView').then(m => ({ default: m.AboutStatementView })));
 const PractitionerSimView = lazy(() => import('./PractitionerSimView').then(m => ({ default: m.PractitionerSimView })));
 const ExampleBrowserView = lazy(() => import('./ExampleBrowserView').then(m => ({ default: m.ExampleBrowserView })));
+const GapAnalysisView = lazy(() => import('./GapAnalysisView').then(m => ({ default: m.GapAnalysisView })));
 
 const TabLoading = () => (
   <div className="flex items-center justify-center py-12">
@@ -43,7 +44,7 @@ interface ReviewStepProps {
   onRestart: () => void;
 }
 
-type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement' | 'practitioner' | 'examples';
+type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement' | 'practitioner' | 'examples' | 'gap-analysis';
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, instruction, onRestart }) => {
   const [activeTab, setActiveTab] = useState<ReviewTab>('gap-map');
@@ -220,6 +221,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const tabGroups: Array<{ key: string; label: string; tabs: Array<{ key: ReviewTab; label: string; icon: string }> }> = [
     { key: 'core', label: '핵심 분석', tabs: [
       { key: 'gap-map', label: 'Gap Map', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+      { key: 'gap-analysis', label: '역량 갭', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
       { key: 'actions', label: '코칭 제안', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
       { key: 'resume', label: '이력서', icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z' },
       { key: 'ats-score', label: 'ATS', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
@@ -372,6 +374,18 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
           <div className={activeTab !== 'gap-map' ? 'hidden' : ''}>
             <GapMapView gapMap={result.gapMap} onActionClick={handleActionClick} />
           </div>
+
+          {/* Gap Analysis Tab */}
+          {activeTab === 'gap-analysis' && (
+            <Suspense fallback={<TabLoading />}>
+              <GapAnalysisView
+                resumeText={originalData.resumeText}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+                companyContext={originalData.companyContext}
+              />
+            </Suspense>
+          )}
 
           {/* Actions Tab */}
           <div className={activeTab !== 'actions' ? 'hidden' : ''}>

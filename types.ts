@@ -53,6 +53,7 @@ export interface UserInputData {
   jobDescription: string;
   githubRepos: GithubRepo[];
   githubData?: GitHubFetchResult[];
+  companyContext?: CompanyContext | null;
 }
 
 export type PdfValidationError = 'TOO_LARGE' | 'INVALID_FORMAT' | 'ENCRYPTED' | 'CORRUPTED' | 'UNKNOWN';
@@ -449,5 +450,39 @@ export interface AboutStatementResult {
   originalAnalysis: string;    // 원본 문장 분석 노트
   versions: AboutStatementVersion[];
   bestVersion: string;         // 추천 버전 ID
+  generatedAt: string;
+}
+
+// ─── Company Context ───
+
+export interface CompanyContext {
+  companyName: string;
+  techStack: string[];
+  culture: string;
+  idealCandidate: string;
+  recentNews: string[];
+  businessDirection: string;
+  confidence: number;            // 0-1, 정보 신뢰도
+  sources: string[];             // 참고한 출처 URL
+}
+
+// ─── Gap Analysis ───
+
+export type GapSeverity = 'required' | 'preferred' | 'bonus';
+
+export interface GapMatch {
+  requirement: string;           // 회사가 원하는 역량
+  severity: GapSeverity;
+  evidence: string | null;       // 이력서에서 찾은 증거 (null이면 갭)
+  matched: boolean;
+  reframeSuggestion?: string;    // 기존 경험을 이 맥락에 맞게 재프레이밍하는 제안
+}
+
+export interface GapAnalysisResult {
+  matches: GapMatch[];
+  matchRate: number;             // 0-100, 전체 매칭률
+  requiredMatchRate: number;     // 0-100, 필수 항목만의 매칭률
+  missingEvidence: string[];     // 이력서에 추가해야 할 경험/성과
+  overallAssessment: string;     // 2-3문장 종합 평가
   generatedAt: string;
 }

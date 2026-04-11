@@ -1,7 +1,8 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { UserInputData, GithubRepo, PdfExtractionProgress, PdfExtractionResult, GitHubFetchResult } from '../types';
+import { UserInputData, GithubRepo, PdfExtractionProgress, PdfExtractionResult, GitHubFetchResult, CompanyContext } from '../types';
 import { validatePdfFile, extractPdfText, cancelExtraction, getErrorMessage } from '../services/pdfService';
 import { fetchAllRepos } from '../services/githubService';
+import { extractCompanyName, researchCompany } from '../services/companyResearchService';
 import { resumeTemplates, industries, type ResumeTemplate } from '../data/templates';
 import { track } from '../services/analytics';
 
@@ -29,6 +30,8 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }
   const [githubExpanded, setGithubExpanded] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<string | null>(null);
+  const [isResearchingCompany, setIsResearchingCompany] = useState(false);
+  const [companyResearchError, setCompanyResearchError] = useState<string | null>(null);
 
   const isParsingPdf = pdfProgress !== null;
 
@@ -519,6 +522,116 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }
                   </svg>
                   {fetchError}
                 </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Section: Company Research (optional) */}
+      <section className="glass-card rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center text-[11px] font-bold text-white section-num shadow-md shadow-cyan-500/30">
+              03
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-zinc-200">회사 정보 <span className="text-[10px] font-normal text-zinc-500 ml-1.5">선택사항</span></h3>
+              <p className="text-xs text-zinc-500 mt-0.5">회사의 기술 스택, 문화, 인재상을 분석에 반영합니다</p>
+            </div>
+          </div>
+          {data.companyContext && (
+            <span className="text-[10px] px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-medium">
+              {data.companyContext.companyName} 수집됨
+            </span>
+          )}
+        </div>
+        <div className="px-5 py-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                if (!data.jobDescription || data.jobDescription.length < 30) {
+                  setCompanyResearchError('채용 공고를 먼저 입력해주세요.');
+                  return;
+                }
+                setIsResearchingCompany(true);
+                setCompanyResearchError(null);
+                try {
+                  const name = await extractCompanyName(data.jobDescription);
+                  if (!name) {
+                    setCompanyResearchError('채용 공고에서 회사명을 찾을 수 없습니다. 직접 입력해주세요.');
+                    setIsResearchingCompany(false);
+                    return;
+                  }
+                  const ctx = await researchCompany(name, data.jobDescription);
+                  onChange('companyContext', ctx);
+                  track({ type: 'analysis_start', resumeLength: 0, jdLength: data.jobDescription.length, hasGithub: false });
+                } catch (e: any) {
+                  setCompanyResearchError(e?.userMessage || '회사 정보 수집에 실패했습니다.');
+                } finally {
+                  setIsResearchingCompany(false);
+                }
+              }}
+              disabled={isResearchingCompany}
+              className="px-4 py-2 text-[12px] font-semibold text-white bg-gradient-to-r from-cyan-500 to-cyan-600 rounded-lg hover:from-cyan-600 hover:to-cyan-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md shadow-cyan-500/20 flex items-center gap-1.5"
+            >
+              {isResearchingCompany ? (
+                <>
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  검색 중...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                  자동 수집
+                </>
+              )}
+            </button>
+            {data.companyContext && (
+              <button
+                onClick={() => onChange('companyContext', null)}
+                className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                초기화
+              </button>
+            )}
+          </div>
+
+          {companyResearchError && (
+            <p className="text-[11px] text-red-400">{companyResearchError}</p>
+          )}
+
+          {data.companyContext && (
+            <div className="space-y-2 animate-fade-in">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-zinc-300">{data.companyContext.companyName}</span>
+                <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                  data.companyContext.confidence >= 0.6
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : data.companyContext.confidence >= 0.3
+                    ? 'bg-amber-500/10 text-amber-400'
+                    : 'bg-red-500/10 text-red-400'
+                }`}>
+                  신뢰도 {Math.round(data.companyContext.confidence * 100)}%
+                </span>
+              </div>
+              {data.companyContext.techStack.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {data.companyContext.techStack.map((t, i) => (
+                    <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400">{t}</span>
+                  ))}
+                </div>
+              )}
+              {data.companyContext.culture && (
+                <p className="text-[11px] text-zinc-500 leading-relaxed">{data.companyContext.culture}</p>
+              )}
+              {data.companyContext.confidence < 0.5 && (
+                <p className="text-[10px] text-amber-400">정보가 부족합니다. 결과를 확인하고 직접 보완해주세요.</p>
               )}
             </div>
           )}
