@@ -1,4 +1,4 @@
-import { Type } from "@google/genai";
+import { Type, ThinkingLevel } from "@google/genai";
 import type { AtsScore, DetailedScore } from "../types";
 import { getAI } from "./promptCache";
 import {
@@ -55,6 +55,14 @@ ${resumeText}
 - 키워드는 자연스러운 문맥에서 사용되어야 함. 단순 나열은 감점
 - 각 키워드가 성과/경험 설명 안에서 자연스럽게 등장하는지 평가하십시오
 
+[Few-shot 예시]
+GOOD 키워드 분석:
+- keyword: "React", foundInResume: true, frequency: 3, context: "React 기반 SPA 개발 경험 2년, React Query로 서버 상태 관리", suggestion: null
+- keyword: "CI/CD", foundInResume: false, frequency: 0, context: null, suggestion: "배포 자동화 경험이 있다면 CI/CD 파이프라인 구축 경험을 추가하세요"
+BAD 키워드 분석 (피하세요):
+- keyword: "리더십", foundInResume: true, frequency: 1, context: "리더십 발휘" ← 너무 모호. 구체적 맥락 필요
+- keyword: "Python", foundInResume: false, suggestion: "Python을 추가하세요" ← 이력서에 Python 경험이 없는데 추가하라는 건 잘못됨
+
 [시맨틱 매칭 분석]
 키워드의 정확한 텍스트 일치뿐 아니라 의미적 유사성도 평가하십시오:
 - "프로젝트 관리" ≈ "PM" ≈ "프로젝트 리드" ≈ "프로젝트 매니지먼트"
@@ -80,7 +88,14 @@ ${resumeText}
    - keywordMatch: 키워드 매칭 점수 (0-100)
    - formatCompliance: 포맷 준수 점수 (0-100)
 
-JSON 스키마에 맞춰 반환하세요.`;
+JSON 스키마에 맞춰 반환하세요.
+
+[자기검증 체크리스트]
+응답 전 반드시 확인하십시오:
+1. overall 점수가 keywordMatch와 formatCompliance의 가중 평균과 일치하는가?
+2. keywords 배열의 각 항목이 JD 원문에 실제 등장하는가?
+3. isStuffing이 true인 경우 keywordMatch가 80% 이상인가?
+4. abbreviations의 각 항목에서 fullForm이 정확한가?`;
 
     const systemInstruction = [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n');
 
@@ -89,6 +104,8 @@ JSON 스키마에 맞춰 반환하세요.`;
       contents: prompt,
       config: {
         systemInstruction,
+        temperature: 0.2,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -217,6 +234,11 @@ ${HR_PERSPECTIVE_ATS}
      - suggestion: 강한 동사로의 전환 제안 (예: "구축했다", "최적화했다", "설계했다")
    - strong: 이미 사용된 강한 동사 목록
 
+[Action Verb Few-shot 예시]
+GOOD: verb: "담당했다", line: "서버 개발을 담당했다", suggestion: "서버 아키텍처를 설계하고 구축했다"
+GOOD: verb: "했다", line: "테스트를 했다", suggestion: "단위 테스트 커버리지를 85%까지 확보했다"
+BAD (피하세요): verb: "활용했다", suggestion: "사용했다" ← 단순 동의어 교체는 의미 없음. 구체적 성과 동사로 바꿔야 함
+
 3. **정량화 분석 (quantification)**:
    - quantified: 이미 정량적 성과가 잘 표현된 문장 목록
    - needsQuantification: 수치화가 필요한 문장
@@ -238,7 +260,14 @@ ${QUANTIFICATION_ATS}
 5. **전체 점수 (overall)**:
    - 섹션별 점수를 가중 평균하여 산출 (0-100)
 
-JSON 스키마에 맞춰 반환하세요.`;
+JSON 스키마에 맞춰 반환하세요.
+
+[자기검증 체크리스트]
+응답 전 반드시 확인하십시오:
+1. overall 점수가 breakdown 4개 항목의 가중합(40/25/20/15)과 일치하는가?
+2. actionVerbs.weak의 각 동사가 실제 이력서에 등장하는가?
+3. quantification.needsQuantification의 각 항목이 실제 이력서에 수치 없이 등장하는가?
+4. starAnalysis의 completeness 점수가 hasS/hasT/hasA/hasR와 논리적으로 일치하는가?`;
 
     const systemInstruction = [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n');
 
@@ -247,6 +276,8 @@ JSON 스키마에 맞춰 반환하세요.`;
       contents: prompt,
       config: {
         systemInstruction,
+        temperature: 0.2,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

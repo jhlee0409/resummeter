@@ -1,4 +1,4 @@
-import { Type } from "@google/genai";
+import { Type, ThinkingLevel } from "@google/genai";
 import type {
   GapMapItem,
   TailoredInstructionWithRequirements,
@@ -129,6 +129,7 @@ ${JSON.stringify(instruction, null, 2)}
       config: {
         systemInstruction: [RESUME_HIERARCHY, GROUNDING_SKILLGAP].join('\n\n'),
         temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",
         responseSchema: learningResourcesSchema,
       },
@@ -206,7 +207,20 @@ ${AI_DETECTION_LINKEDIN}
    - 현재 프로필에서의 등장 횟수
    - 권장 등장 횟수
 
+[Few-shot 예시]
+GOOD headline: "백엔드 개발자 | 대용량 트래픽 처리 전문 | Redis, Kafka, Spring Boot" (역할 + 전문성 + 기술 스택)
+BAD headline: "열정적인 개발자입니다" (구체성 없음, 검색 불가)
+GOOD experience highlight: "일 50만건 주문 처리 API 설계, 응답시간 3.2초→0.4초 단축 (Redis 캐싱 + Kafka 비동기 큐)" (수치 + 기술 + 임팩트)
+BAD experience highlight: "서버 개발 담당" (성과 없음, 기술 없음)
+
 모든 내용은 한국어로 작성하세요.
+
+[자기검증 체크리스트]
+응답 전 반드시 확인하십시오:
+1. headline이 120자 이내인가?
+2. about이 2000자 이내인가?
+3. experienceHighlights 각 항목이 이력서에 실제 존재하는 경험인가?
+4. keywordDensity의 각 keyword가 이력서 원문에 등장하는가?
 `;
 
   const linkedInSchema = {
@@ -247,6 +261,8 @@ ${AI_DETECTION_LINKEDIN}
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_RESUME_ONLY, RESUME_HIERARCHY].join('\n\n'),
+        temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: linkedInSchema,
       },

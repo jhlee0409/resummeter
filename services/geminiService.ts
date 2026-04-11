@@ -1,4 +1,4 @@
-import { Type } from "@google/genai";
+import { Type, ThinkingLevel } from "@google/genai";
 import { CoachingResult, GithubRepo, TailoredInstructionWithRequirements, GitHubFetchResult, JdRequirement, Evidence, EvidenceBank, GapMapItem, ActionItem, NarrativeFramework, NarrativeSectionSpec, NarrativeSectionResult, NarrativeGenerationResult, NarrativeAnalysis, KStarKBreakdown, TechNarrativeBreakdown } from "../types";
 import { getAI } from "./promptCache";
 import { withRetry } from './retry';
@@ -104,6 +104,8 @@ export async function generateTailoredInstruction(jobDescription: string): Promi
       contents: metaPrompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL].join('\n\n'),
+        temperature: 0.2,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -280,6 +282,7 @@ ${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}${HR_PER
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
         temperature: 0.2,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -464,6 +467,8 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+        temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -773,6 +778,8 @@ ${githubDataFormatted}
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL].join('\n\n'),
+        temperature: 0.2,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -1242,6 +1249,7 @@ ${coachingContext}`;
     config: {
       systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
       temperature: 0.2,
+      thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
       responseMimeType: "application/json",
       responseSchema: buildNarrativeAnalysisSchema(spec.framework),
     },
@@ -1402,6 +1410,7 @@ async function writeNarrativeFromAnalysis(
     config: {
       systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
       temperature: 0.3,
+      thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       responseMimeType: "application/json",
       responseSchema,
     },

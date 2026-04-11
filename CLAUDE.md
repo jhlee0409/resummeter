@@ -54,7 +54,7 @@ pnpm preview         # 빌드 결과 미리보기
 
 ### Grounding & 할루시네이션 방지
 - **Grounding 규칙**: 제공된 데이터만 사용, 외부 지식 추론 금지
-- **Self-verification (CoVe)**: 코칭/서술형/커버레터에서 생성 후 자기 검증 단계
+- **Self-verification (CoVe)**: 모든 14개 프롬프트에 자기검증 체크리스트 적용. ATS/상세점수/실무자시선/LinkedIn에 추가 (04-11)
 - **입력 품질 가드**: 이력서 100자 미만, JD 50자 미만일 때 분석 거부
 
 ### 이력서 활용
@@ -85,8 +85,20 @@ pnpm preview         # 빌드 결과 미리보기
 - `promptCache.ts`: Gemini `ai.caches.create()` 기반 세션 캐시 (이력서+JD+instruction, TTL 30분)
 - 캐시 생성 실패 시 자동 인라인 폴백 (systemInstruction + contents)
 
+### Thinking Level (적용 완료, 04-11)
+- Pro 모델 (8개 호출): `ThinkingLevel.HIGH` — 복잡한 분석/생성에 extended thinking
+- Flash 모델 (6개 호출): `ThinkingLevel.MEDIUM` — 빠른 처리에 적절한 추론
+- Temperature 일관화: 분석=0.2, 생성=0.3 (14개 전부 설정)
+
+### Few-shot 예시 (적용 완료, 04-11)
+- ATS 키워드 분석: GOOD/BAD 키워드 매칭 예시
+- 상세 점수: Action Verb GOOD/BAD 예시
+- 면접 질문: GOOD/BAD 기술/인성 질문 예시
+- 실무자 시선: GOOD/BAD 강점/우려 서술 예시
+- LinkedIn: GOOD/BAD headline/experience 예시
+
 ### 미적용 (향후 과제)
-- 업종별 맞춤화 (IT/금융/의료 등 키워드 가중치 차별화)
+- 출력 후처리 Zod 스키마 검증 (점수 범위, 필드 길이 등)
 
 ## 데이터 의존성 매트릭스
 

@@ -31,6 +31,7 @@
 | ✅ | D1: Vitest 테스트 프레임워크 + 9개 파일 95개 테스트 | 04-11 | — |
 | ✅ | 타입 에러 20개 전부 수정 (tsc clean) | 04-11 | — |
 | ✅ | 번들 최적화: React.lazy + manualChunks (1,394KB→437KB, -69%) | 04-11 | — |
+| ✅ | LLM 고도화: ThinkingLevel(14개), Temperature(14개), Few-shot(5개), CoVe(4개 추가) | 04-11 | — |
 
 ---
 

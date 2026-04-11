@@ -1,4 +1,4 @@
-import { Type } from "@google/genai";
+import { Type, ThinkingLevel } from "@google/genai";
 import { InterviewQuestion, InterviewFeedback, TailoredInstructionWithRequirements } from "../types";
 import { getAI } from "./promptCache";
 import {
@@ -71,6 +71,12 @@ ${HR_PERSPECTIVE_INTERVIEW}
 - Action: 수행한 구체적 행동과 기술을 설명하도록 안내
 - Result: 정량적 성과를 제시하도록 안내
 
+[Few-shot 예시]
+GOOD 기술 질문: "이력서에서 Redis 캐싱으로 API 응답시간을 단축했다고 하셨는데, 캐시 무효화 전략은 어떻게 설계하셨나요?" (이력서 내용 기반, 구체적, 심화)
+BAD 기술 질문: "Redis에 대해 설명해주세요" (너무 일반적, 이력서와 무관)
+GOOD 인성 질문: "이력서에서 코드 리뷰 프로세스를 제안했다고 하셨는데, 팀원 중 코드 리뷰에 부정적인 반응이 있었다면 어떻게 대처하셨나요?" (경험 기반 + 소프트스킬 검증)
+BAD 인성 질문: "팀워크에 대해 어떻게 생각하시나요?" (이력서와 무관, 범용적)
+
 [금지 사항]
 - 지나치게 일반적인 질문 금지 (예: "본인의 장단점을 말씀해주세요")
 - 이력서에 없는 기술/경험을 언급하는 질문 금지
@@ -82,6 +88,8 @@ ${HR_PERSPECTIVE_INTERVIEW}
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n'),
+        temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -207,6 +215,7 @@ ${jobDescription}
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n'),
         temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

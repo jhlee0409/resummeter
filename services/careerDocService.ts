@@ -1,4 +1,4 @@
-import { Type } from "@google/genai";
+import { Type, ThinkingLevel } from "@google/genai";
 import {
   CareerStatement,
   CareerStatementResult,
@@ -116,6 +116,7 @@ ${QUANTIFICATION_CAREER}
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
         temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -339,6 +340,8 @@ Format in Markdown with natural paragraph flow.`;
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+        temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -479,6 +482,8 @@ ${resumeText.slice(0, 2000)}
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+        temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,

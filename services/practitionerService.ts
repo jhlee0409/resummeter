@@ -1,4 +1,4 @@
-import { Type } from "@google/genai";
+import { Type, ThinkingLevel } from "@google/genai";
 import { getAI } from './promptCache';
 import type { TailoredInstructionWithRequirements, Industry } from '../types';
 import { withRetry } from './retry';
@@ -78,6 +78,12 @@ ${profile.keyFocusAreas.join(', ')}
 - Soft Skills: ${instruction.evaluationCriteria.softSkills.join(', ')}
 - 우대 경험: ${instruction.evaluationCriteria.preferredExperience.join(', ')}
 
+[Few-shot 예시 — IT/CTO 관점]
+GOOD strength: "Redis 캐싱 도입으로 API 응답시간 3.2초→0.4초 단축. 이런 수치 기반 성과는 실무 역량을 명확히 보여줌"
+BAD strength: "다양한 기술을 활용" ← 이건 강점이 아님. 무엇을 어떻게 활용했는지가 빠져 있음
+GOOD concern: "MSA 전환 경험을 언급했지만 서비스 간 통신 방식(gRPC? REST? 이벤트 기반?)을 명시하지 않음. 아키텍처 이해 수준이 불분명"
+BAD concern: "경력이 짧다" ← 이건 이력서 내용 기반이 아님. 사실 관계만 기술해야 함
+
 아래 이력서를 ${persona.title}의 시선으로 리뷰하세요.
 
 <user-resume>
@@ -105,7 +111,14 @@ ${jobDescription}
 perspective 필드에는 "${persona.title}"을 그대로 넣으세요.
 industry 필드에는 "${profile.label}"을 그대로 넣으세요.
 
-JSON 스키마에 맞춰 반환하세요.`;
+JSON 스키마에 맞춰 반환하세요.
+
+[자기검증 체크리스트]
+응답 전 반드시 확인하십시오:
+1. strengths/concerns 각 항목이 이력서 원문의 구체적 내용을 근거로 하는가?
+2. interviewQuestions가 이력서에 언급된 경험에 기반하는가?
+3. hiringRecommendation이 strengths/concerns 분석과 논리적으로 일치하는가?
+4. overallImpression이 업종 실무자 관점에서 작성되었는가?`;
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
@@ -113,6 +126,8 @@ JSON 스키마에 맞춰 반환하세요.`;
       contents: prompt,
       config: {
         systemInstruction,
+        temperature: 0.3,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
