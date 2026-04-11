@@ -51,6 +51,8 @@ export interface GitHubFetchResult {
 export interface UserInputData {
   resumeText: string;
   jobDescription: string;
+  companyName: string;
+  jobTitle: string;
   githubRepos: GithubRepo[];
   githubData?: GitHubFetchResult[];
   companyContext?: CompanyContext | null;
@@ -79,6 +81,7 @@ export interface PdfExtractionResult {
 export interface TailoredInstruction {
   persona: string;
   keywords: string[];
+  keywordAliases?: Array<{ keyword: string; aliases: string[] }>;  // 시맨틱 동의어 매핑
   evaluationCriteria: {
     hardSkills: string[];
     softSkills: string[];
@@ -454,8 +457,28 @@ export interface AboutStatementResult {
   generatedAt: string;
 }
 
-// ─── Company Context ───
+// ─── Company & Job Role Research ───
 
+export interface CompanyInfo {
+  companyName: string;
+  techStack: string[];
+  culture: string;
+  idealCandidate: string;
+  recentNews: string[];
+  businessDirection: string;
+  confidence: number;
+  sources: string[];
+}
+
+export interface JobRoleInfo {
+  jobTitle: string;
+  roleInsight: string;           // 이 직무가 뭔지 (기원, 업계 맥락, 유사 역할)
+  roleKeyTraits: string[];       // 이 직무에서 성공하는 사람의 핵심 특성 3-5개
+  confidence: number;
+  sources: string[];
+}
+
+// 하위 호환용 합성 타입
 export interface CompanyContext {
   companyName: string;
   techStack: string[];
@@ -463,10 +486,10 @@ export interface CompanyContext {
   idealCandidate: string;
   recentNews: string[];
   businessDirection: string;
-  roleInsight: string;           // 직무(포지션)에 대한 업계 리서치
-  roleKeyTraits: string[];       // 이 직무에서 성공하는 사람의 핵심 특성
-  confidence: number;            // 0-1, 정보 신뢰도
-  sources: string[];             // 참고한 출처 URL
+  roleInsight: string;
+  roleKeyTraits: string[];
+  confidence: number;
+  sources: string[];
 }
 
 // ─── Gap Analysis ───

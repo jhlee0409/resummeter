@@ -93,11 +93,13 @@ function parseYearMonth(str: string): { year: number; month: number } | null {
 }
 
 export function parseResumeExperience(resumeText: string): ParsedResume {
-  const periods: { name: string; months: number }[] = [];
+  const periods: { name: string; months: number; startEpoch: number; endEpoch: number }[] = [];
 
-  // "2024.04 - 현재", "Dec. 2020 - Apr. 2023" 패턴 찾기
   const lines = resumeText.split('\n');
   for (const line of lines) {
+    // 프로젝트 라인 스킵: [프로젝트명] 패턴
+    if (/^\s*\[/.test(line)) continue;
+
     for (const pattern of DATE_PATTERNS) {
       pattern.lastIndex = 0;
       const match = pattern.exec(line);
@@ -109,10 +111,14 @@ export function parseResumeExperience(resumeText: string): ParsedResume {
           const end = parseYearMonth(parts[1].trim());
           if (start && end) {
             const months = (end.year - start.year) * 12 + (end.month - start.month);
-            if (months > 0 && months < 360) { // 30년 이상은 오류로 간주
+            if (months > 0 && months < 360) {
+              const startEpoch = new Date(start.year, start.month - 1).getTime();
+              const endEpoch = new Date(end.year, end.month - 1).getTime();
               periods.push({
                 name: line.trim().slice(0, 50),
                 months,
+                startEpoch,
+                endEpoch,
               });
             }
           }
@@ -126,12 +132,28 @@ export function parseResumeExperience(resumeText: string): ParsedResume {
     return { totalExperience: null, companies: [] };
   }
 
-  // 겹치는 기간은 최대값 기준 (병행 근무 가능)
-  const totalMonths = periods.reduce((sum, p) => sum + p.months, 0);
-  const totalYears = Math.round(totalMonths / 12 * 10) / 10; // 소수점 1자리
+  // 겹치는 기간 merge (overlap 제거)
+  periods.sort((a, b) => a.startEpoch - b.startEpoch);
+  const merged: typeof periods = [];
+  for (const p of periods) {
+    const last = merged[merged.length - 1];
+    if (last && p.startEpoch <= last.endEpoch) {
+      // overlap → extend end
+      last.endEpoch = Math.max(last.endEpoch, p.endEpoch);
+    } else {
+      merged.push({ ...p });
+    }
+  }
+
+  // merged 기간으로 총 개월 계산
+  const totalMonths = merged.reduce((sum, p) => {
+    const ms = p.endEpoch - p.startEpoch;
+    return sum + Math.round(ms / (30.44 * 24 * 60 * 60 * 1000));
+  }, 0);
+  const totalYears = Math.round(totalMonths / 12 * 10) / 10;
 
   return {
     totalExperience: totalYears,
-    companies: periods,
+    companies: merged.map(p => ({ name: p.name, months: Math.round((p.endEpoch - p.startEpoch) / (30.44 * 24 * 60 * 60 * 1000)) })),
   };
 }

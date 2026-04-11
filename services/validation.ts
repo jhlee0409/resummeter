@@ -46,3 +46,65 @@ export function safeParseJSON<T>(jsonText: string | undefined, context: string):
     );
   }
 }
+
+// ─── Output Validation (Zod) ───
+
+import { z } from 'zod';
+
+const GapMapItemSchema = z.object({
+  requirement: z.string(),
+  category: z.string(),
+  currentLevel: z.enum(['strong', 'weak', 'missing']),
+  jdMentions: z.number().min(0),
+  resumeMentions: z.number().min(0),
+  suggestion: z.string(),
+});
+
+const ActionItemSchema = z.object({
+  id: z.string(),
+  targetSection: z.string(),
+  before: z.string(),
+  suggestion: z.string(),
+  after: z.string().optional(),
+  priority: z.enum(['critical', 'high', 'medium', 'low']),
+  category: z.string(),
+});
+
+export const AnalysisOutputSchema = z.object({
+  summary: z.string().min(1),
+  gapMap: z.array(GapMapItemSchema).min(1),
+  analysisItems: z.array(z.object({
+    id: z.string(),
+    before: z.string(),
+    issue: z.string(),
+    direction: z.string(),
+    priority: z.string(),
+    category: z.string(),
+  })),
+  quickWins: z.array(z.string()),
+});
+
+export const CoachingOutputSchema = z.object({
+  optimizedResume: z.string().min(10),
+  summary: z.string().min(1),
+  gapMap: z.array(GapMapItemSchema).min(1),
+  actionItems: z.array(ActionItemSchema),
+  quickWins: z.array(z.string()),
+  insights: z.array(z.object({
+    category: z.string(),
+    observation: z.string(),
+    impact: z.string(),
+  })),
+});
+
+/**
+ * Zod 스키마로 LLM 출력을 검증합니다.
+ * 실패 시 warning 로그 + 원본 반환 (서비스 중단 방지).
+ */
+export function validateOutput<T>(data: T, schema: z.ZodSchema, context: string): T {
+  const result = schema.safeParse(data);
+  if (!result.success) {
+    console.warn(`[${context}] Zod 검증 실패:`, result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', '));
+  }
+  return data; // 검증 실패해도 원본 반환 (graceful degradation)
+}

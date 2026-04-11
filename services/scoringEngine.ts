@@ -9,6 +9,7 @@ import type {
   ScoringResult,
   FitLevel,
   Penalty,
+  CompanyContext,
 } from '../types';
 import { parseJDRequirements, parseResumeExperience } from './requirementParser';
 
@@ -17,6 +18,7 @@ export function calculateScore(
   instruction: TailoredInstructionWithRequirements,
   resumeText: string,
   jobDescription: string,
+  companyContext?: CompanyContext | null,
 ): ScoringResult {
   // 가드: 데이터 부족
   if (gapMap.length < 3) {
@@ -68,25 +70,52 @@ export function calculateScore(
     }
   }
 
-  // 학력 체크
+  // 학력 체크 — JD에서 required인 경우만 전체 감점, preferred면 절반
   if (parsed.education !== null) {
-    // 간단 체크: 이력서에 학력 관련 키워드가 있는지
     const hasEducation = /학사|석사|박사|대학교|University|Bachelor|Master|PhD/i.test(resumeText);
     if (!hasEducation) {
-      penalties.push({ category: '학력', points: 15, reason: `학력 요건(${parsed.education}) 확인 불가` });
-      hardReqDeduction += 15;
+      const eduReqs = (instruction.jdRequirements || []).filter(r => r.category === 'education');
+      const isRequired = eduReqs.some(r => r.importance === 'required');
+      const points = isRequired ? 15 : 8; // preferred이거나 JD에 없으면 절반 감점
+      penalties.push({ category: '학력', points, reason: `학력 요건(${parsed.education}) 확인 불가${isRequired ? '' : ' (우대사항)'}` });
+      hardReqDeduction += points;
     }
   }
 
   totalDeduction += hardReqDeduction;
 
-  // ─── 2단계: gapMap 카테고리별 감점 ───
+  // ─── HR Red Flags (정보 제공, 감점 아님) ───
+
+  if (resume.companies.length >= 3) {
+    const avgMonths = resume.companies.reduce((s, c) => s + c.months, 0) / resume.companies.length;
+    if (avgMonths < 12) {
+      warnings.push(`평균 재직기간 ${Math.round(avgMonths)}개월 — 잦은 이직으로 인식될 수 있음`);
+    }
+  }
+
+  // ─── 2단계: gapMap 카테고리별 감점 (JD 중요도 반영) ───
+
+  // jdRequirements에서 카테고리별 required 비율 계산
+  const jdReqs = instruction.jdRequirements || [];
+  const importanceWeight = (category: string): number => {
+    const items = jdReqs.filter(r => r.category === category);
+    if (items.length === 0) return 1.0; // JD에 언급 없으면 보수적으로 전체 가중치
+    const requiredCount = items.filter(r => r.importance === 'required').length;
+    return 0.5 + 0.5 * (requiredCount / items.length); // 0.5 ~ 1.0
+  };
+
+  const BASE_DEDUCTIONS = {
+    'hard-skill': 25,
+    'experience': 20,
+    'soft-skill': 10,
+    'education': 5,
+  } as const;
 
   const categories: Array<{ name: string; maxDeduction: number; key: keyof ScoringResult['breakdown'] }> = [
-    { name: 'hard-skill', maxDeduction: 25, key: 'hardSkill' },
-    { name: 'experience', maxDeduction: 20, key: 'experience' },
-    { name: 'soft-skill', maxDeduction: 10, key: 'softSkill' },
-    { name: 'education', maxDeduction: 5, key: 'experience' }, // education items 합산
+    { name: 'hard-skill', maxDeduction: Math.ceil(BASE_DEDUCTIONS['hard-skill'] * importanceWeight('hard-skill')), key: 'hardSkill' },
+    { name: 'experience', maxDeduction: Math.ceil(BASE_DEDUCTIONS['experience'] * importanceWeight('experience')), key: 'experience' },
+    { name: 'soft-skill', maxDeduction: Math.ceil(BASE_DEDUCTIONS['soft-skill'] * importanceWeight('soft-skill')), key: 'softSkill' },
+    { name: 'education', maxDeduction: Math.ceil(BASE_DEDUCTIONS['education'] * importanceWeight('education')), key: 'experience' }, // breakdown에 education 키 없음 → experience에 합산
   ];
 
   const breakdownDeductions: Record<string, number> = {
@@ -116,12 +145,25 @@ export function calculateScore(
     }
   }
 
-  // ─── 3단계: 도메인 키워드 감점 ───
+  // ─── 3단계: 도메인 키워드 감점 (시맨틱 매칭) ───
 
   const jdKeywords = instruction.keywords || [];
   if (jdKeywords.length > 0) {
     const resumeLower = resumeText.toLowerCase();
-    const missingKeywords = jdKeywords.filter(kw => !resumeLower.includes(kw.toLowerCase()));
+    // keywordAliases 배열 → Map 변환 (빠른 lookup)
+    const aliasMap = new Map<string, string[]>();
+    for (const entry of instruction.keywordAliases || []) {
+      aliasMap.set(entry.keyword.toLowerCase(), entry.aliases);
+    }
+
+    const missingKeywords = jdKeywords.filter(kw => {
+      // 1차: 원본 키워드 exact match
+      if (resumeLower.includes(kw.toLowerCase())) return false;
+      // 2차: alias match
+      const kwAliases = aliasMap.get(kw.toLowerCase());
+      if (kwAliases && kwAliases.some(alias => resumeLower.includes(alias.toLowerCase()))) return false;
+      return true;
+    });
     const missingRatio = missingKeywords.length / jdKeywords.length;
 
     if (missingRatio > 0.5) {
@@ -129,7 +171,7 @@ export function calculateScore(
       penalties.push({
         category: '도메인 키워드',
         points: domainDeduction,
-        reason: `JD 키워드 ${jdKeywords.length}개 중 ${missingKeywords.length}개 미매칭 (${Math.round(missingRatio * 100)}%)`,
+        reason: `JD 키워드 ${jdKeywords.length}개 중 ${missingKeywords.length}개 미매칭 (${Math.round(missingRatio * 100)}%): ${missingKeywords.join(', ')}`,
       });
       breakdownDeductions.domain = domainDeduction;
       totalDeduction += domainDeduction;
@@ -138,10 +180,62 @@ export function calculateScore(
       penalties.push({
         category: '도메인 키워드',
         points: domainDeduction,
-        reason: `JD 키워드 ${jdKeywords.length}개 중 ${missingKeywords.length}개 미매칭`,
+        reason: `JD 키워드 ${jdKeywords.length}개 중 ${missingKeywords.length}개 미매칭: ${missingKeywords.join(', ')}`,
       });
       breakdownDeductions.domain = domainDeduction;
       totalDeduction += domainDeduction;
+    }
+  }
+
+  // ─── 4단계: 직무 특성 보너스 (리서치 기반) ───
+
+  if (companyContext?.roleKeyTraits?.length) {
+    const resumeLower = resumeText.toLowerCase();
+    const matchedTraits = companyContext.roleKeyTraits.filter(trait => {
+      const words = trait.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+      return words.some(word => resumeLower.includes(word));
+    });
+    const matchRatio = matchedTraits.length / companyContext.roleKeyTraits.length;
+    if (matchRatio >= 0.3) {
+      const bonus = Math.min(5, Math.round(matchRatio * 7));
+      totalDeduction = Math.max(0, totalDeduction - bonus);
+      warnings.push(`직무 핵심 특성 ${companyContext.roleKeyTraits.length}개 중 ${matchedTraits.length}개 매칭 (+${bonus}점)`);
+    }
+  }
+
+  // ─── 5단계: 잠재력 보너스 ───
+
+  {
+    let potentialBonus = 0;
+    const reasons: string[] = [];
+    // 항상 사용 가능한 데이터만 사용 (GitHub은 선택이라 점수에 반영하면 불공평)
+
+    // 1. Gap 분포: weak 많고 missing 적으면 기초 있음 → 교육 가능
+    const weakCount = gapMap.filter(g => g.currentLevel === 'weak').length;
+    const missingCount = gapMap.filter(g => g.currentLevel === 'missing').length;
+    if (weakCount >= 3 && missingCount <= 1) {
+      potentialBonus += 2;
+      reasons.push(`기초역량 보유(weak ${weakCount}/missing ${missingCount})`);
+    }
+
+    // 2. 경력 다양성: 3개+ 회사 경험 → 다양한 환경 적응력
+    if (resume.companies.length >= 3) {
+      potentialBonus += 2;
+      reasons.push(`${resume.companies.length}개 회사 경험`);
+    }
+
+    // 3. 크로스 도메인: hard-skill strong + soft-skill strong 동시 → 균형잡힌 역량
+    const hsStrong = gapMap.filter(g => g.category === 'hard-skill' && g.currentLevel === 'strong').length;
+    const ssStrong = gapMap.filter(g => g.category === 'soft-skill' && g.currentLevel === 'strong').length;
+    if (hsStrong >= 2 && ssStrong >= 1) {
+      potentialBonus += 1;
+      reasons.push('기술+소프트스킬 균형');
+    }
+
+    potentialBonus = Math.min(5, potentialBonus);
+    if (potentialBonus > 0) {
+      totalDeduction = Math.max(0, totalDeduction - potentialBonus);
+      warnings.push(`잠재력 보너스 +${potentialBonus}점: ${reasons.join(', ')}`);
     }
   }
 
