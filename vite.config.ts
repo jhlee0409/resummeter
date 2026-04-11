@@ -18,6 +18,23 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
+      },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              'pdf': ['pdfjs-dist'],
+              'vendor': ['@google/genai', 'zod', 'marked', 'diff'],
+              'radix': [
+                '@radix-ui/react-tabs',
+                '@radix-ui/react-collapsible',
+                '@radix-ui/react-dropdown-menu',
+                '@radix-ui/react-select',
+                '@radix-ui/react-progress',
+              ],
+            }
+          }
+        }
       }
     };
 });

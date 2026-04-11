@@ -17,6 +17,9 @@ export enum AppStep {
 export interface GithubRepo {
   url: string;
   description: string;
+  name?: string;
+  language?: string | null;
+  stars?: number;
 }
 
 export interface GitHubRepoData {

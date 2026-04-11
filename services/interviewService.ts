@@ -125,7 +125,7 @@ ${HR_PERSPECTIVE_INTERVIEW}
     const jsonText = response.text;
     if (!jsonText) throw new Error("면접 질문 생성 결과가 비어있습니다.");
 
-    const parsed = safeParseJSON(jsonText, '면접 질문 생성');
+    const parsed = safeParseJSON<{ questions: InterviewQuestion[] }>(jsonText, '면접 질문 생성');
     return parsed.questions || [];
   } catch (error: unknown) {
     console.error("면접 질문 생성 실패:", error);
@@ -235,7 +235,7 @@ ${jobDescription}
     const jsonText = response.text;
     if (!jsonText) throw new Error("답변 평가 결과가 비어있습니다.");
 
-    const parsed = safeParseJSON(jsonText, '답변 평가');
+    const parsed = safeParseJSON<{ score?: number; strengths?: string[]; improvements?: string[]; revisedAnswer?: string }>(jsonText, '답변 평가');
     return {
       questionId: question.id,
       score: parsed.score || 0,

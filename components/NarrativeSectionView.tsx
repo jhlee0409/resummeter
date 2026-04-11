@@ -1,10 +1,21 @@
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { NarrativeSectionResult } from '../types';
+import { NarrativeSectionResult, NarrativeSectionSpec } from '../types';
 
 interface NarrativeSectionViewProps {
   sections: NarrativeSectionResult[];
+  specs?: NarrativeSectionSpec[];
+  onInsertToResume?: (title: string, content: string) => void;
 }
+
+const SECTION_TYPE_LABELS: Record<string, string> = {
+  'self-introduction': '자기소개',
+  'career-project': '경력사항/프로젝트 경험',
+  'technical-skills': '보유기술 및 핵심역량',
+  'motivation': '지원동기',
+  'growth-plan': '성장계획/입사 후 포부',
+  'custom': '기타 (직접입력)',
+};
 
 const frameworkConfig = {
   'k-star-k': { label: 'K-STAR-K', bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
@@ -27,7 +38,7 @@ const techNarrativeLabels = {
   impact: { label: '임팩트', color: 'text-cyan-400' },
 };
 
-export const NarrativeSectionView: React.FC<NarrativeSectionViewProps> = ({ sections }) => {
+export const NarrativeSectionView: React.FC<NarrativeSectionViewProps> = ({ sections, specs, onInsertToResume }) => {
   const handleCopyAll = async () => {
     const allText = sections
       .filter(s => s.status === 'success')
@@ -61,16 +72,22 @@ export const NarrativeSectionView: React.FC<NarrativeSectionViewProps> = ({ sect
       {/* Section Cards */}
       <div className="space-y-4">
         {sections.map((section) => (
-          <NarrativeSectionCard key={section.specId} section={section} />
+          <NarrativeSectionCard
+            key={section.specId}
+            section={section}
+            spec={specs?.find(s => s.id === section.specId)}
+            onInsertToResume={onInsertToResume}
+          />
         ))}
       </div>
     </div>
   );
 };
 
-const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult }> = ({ section }) => {
+const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult; spec?: NarrativeSectionSpec; onInsertToResume?: (title: string, content: string) => void }> = ({ section, spec, onInsertToResume }) => {
   const [expanded, setExpanded] = useState(true);
   const [breakdownExpanded, setBreakdownExpanded] = useState(false);
+  const [inputExpanded, setInputExpanded] = useState(false);
   const [editedContent, setEditedContent] = useState(section.content);
   const [currentCharCount, setCurrentCharCount] = useState(section.charCount);
   const fConfig = frameworkConfig[section.framework];
@@ -118,6 +135,17 @@ const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult }> = ({ s
           </div>
 
           <div className="flex items-center gap-2">
+            {section.status === 'success' && onInsertToResume && (
+              <button
+                onClick={() => onInsertToResume(section.title, editedContent)}
+                className="px-3 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20 text-brand-400 hover:bg-brand-500/20 hover:text-brand-300 transition-all text-xs font-medium flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                이력서에 삽입
+              </button>
+            )}
             {section.status === 'success' && (
               <button
                 onClick={handleCopy}
@@ -156,6 +184,56 @@ const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult }> = ({ s
             </div>
           ) : (
             <>
+              {/* Input Context */}
+              {spec && (
+                <div className="border border-white/5 rounded-lg overflow-hidden">
+                  <button
+                    onClick={() => setInputExpanded(!inputExpanded)}
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-medium text-zinc-500 hover:text-zinc-300 transition-colors bg-zinc-900/30"
+                  >
+                    <span className="flex items-center gap-2">
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      입력 조건
+                    </span>
+                    <svg
+                      className={`w-4 h-4 transition-transform duration-200 ${inputExpanded ? 'rotate-180' : ''}`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {inputExpanded && (
+                    <div className="px-4 py-3 space-y-2 border-t border-white/5 bg-zinc-900/20 animate-fade-in">
+                      <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-xs">
+                        <span className="text-zinc-600 font-medium">항목 유형</span>
+                        <span className="text-zinc-400">{SECTION_TYPE_LABELS[spec.type] || spec.type}</span>
+                        {spec.type === 'custom' && spec.customTitle && (
+                          <>
+                            <span className="text-zinc-600 font-medium">항목명</span>
+                            <span className="text-zinc-400">{spec.customTitle}</span>
+                          </>
+                        )}
+                        <span className="text-zinc-600 font-medium">프레임워크</span>
+                        <span className={`${fConfig.text}`}>{fConfig.label}</span>
+                        <span className="text-zinc-600 font-medium">글자 수 제한</span>
+                        <span className="text-zinc-400">{spec.charLimit}자</span>
+                        {spec.prompt && (
+                          <>
+                            <span className="text-zinc-600 font-medium">방향성 힌트</span>
+                            <span className="text-zinc-300">{spec.prompt}</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Editable Textarea */}
               <div className="relative">
                 <textarea
@@ -246,15 +324,15 @@ const NarrativeSectionCard: React.FC<{ section: NarrativeSectionResult }> = ({ s
                 </div>
               )}
 
-              {/* GitHub Evidences */}
+              {/* Evidences (이력서/GitHub 근거) */}
               {section.githubEvidences.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[10px] font-semibold text-zinc-600 uppercase">GitHub 근거</p>
+                  <p className="text-[10px] font-semibold text-zinc-600 uppercase">활용된 근거</p>
                   <div className="space-y-1.5">
                     {section.githubEvidences.map((evidence, i) => (
                       <div key={i} className="flex items-start gap-2 text-xs text-zinc-500">
-                        <svg className="w-3.5 h-3.5 shrink-0 mt-0.5 text-zinc-600" fill="currentColor" viewBox="0 0 16 16">
-                          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+                        <svg className="w-3.5 h-3.5 shrink-0 mt-0.5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span className="leading-relaxed">{evidence}</span>
                       </div>

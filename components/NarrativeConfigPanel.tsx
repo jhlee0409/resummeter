@@ -188,7 +188,7 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
                         type="text"
                         value={spec.customTitle || ''}
                         onChange={(e) => handleUpdateSpec(spec.id, { customTitle: e.target.value })}
-                        placeholder="항목명 입력"
+                        placeholder="서술형 질문 입력"
                         disabled={isGenerating}
                         className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
                       />
@@ -240,33 +240,65 @@ export const NarrativeConfigPanel: React.FC<NarrativeConfigPanelProps> = ({
                   </Select.Root>
                 </div>
 
-                <Collapsible.Root open={expandedPrompts.has(spec.id)} onOpenChange={() => togglePromptExpanded(spec.id)}>
-                  <Collapsible.Trigger
-                    disabled={isGenerating}
-                    className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/70 transition-colors disabled:opacity-50 group"
-                  >
-                    <svg
-                      className="w-3 h-3 transition-transform group-data-[state=open]:rotate-90"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                    </svg>
-                    방향성 힌트 (선택사항)
-                  </Collapsible.Trigger>
-                  <Collapsible.Content className="mt-2">
-                    <textarea
-                      value={spec.prompt || ''}
-                      onChange={(e) => handleUpdateSpec(spec.id, { prompt: e.target.value })}
-                      placeholder="예: 리더십 경험 중심으로, 팀 협업 사례 포함"
+                {spec.type === 'custom' ? (
+                  /* 기타 항목: 추가 지시 (선택) — customTitle이 질문 본문 */
+                  <Collapsible.Root open={expandedPrompts.has(spec.id)} onOpenChange={() => togglePromptExpanded(spec.id)}>
+                    <Collapsible.Trigger
                       disabled={isGenerating}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 resize-none disabled:opacity-50"
-                      rows={3}
-                    />
-                  </Collapsible.Content>
-                </Collapsible.Root>
+                      className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/70 transition-colors disabled:opacity-50 group"
+                    >
+                      <svg
+                        className="w-3 h-3 transition-transform group-data-[state=open]:rotate-90"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                      추가 지시 (선택사항)
+                    </Collapsible.Trigger>
+                    <Collapsible.Content className="mt-2">
+                      <textarea
+                        value={spec.prompt || ''}
+                        onChange={(e) => handleUpdateSpec(spec.id, { prompt: e.target.value })}
+                        placeholder="예: 회사 경력 중심으로 작성, 팀 리드 경험 강조"
+                        disabled={isGenerating}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 resize-none disabled:opacity-50"
+                        rows={2}
+                      />
+                    </Collapsible.Content>
+                  </Collapsible.Root>
+                ) : (
+                  /* 기정의 항목: 방향성 힌트 (접이식, 선택) */
+                  <Collapsible.Root open={expandedPrompts.has(spec.id)} onOpenChange={() => togglePromptExpanded(spec.id)}>
+                    <Collapsible.Trigger
+                      disabled={isGenerating}
+                      className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white/70 transition-colors disabled:opacity-50 group"
+                    >
+                      <svg
+                        className="w-3 h-3 transition-transform group-data-[state=open]:rotate-90"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                        strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                      방향성 힌트 (선택사항)
+                    </Collapsible.Trigger>
+                    <Collapsible.Content className="mt-2">
+                      <textarea
+                        value={spec.prompt || ''}
+                        onChange={(e) => handleUpdateSpec(spec.id, { prompt: e.target.value })}
+                        placeholder="예: 리더십 경험 중심으로, 팀 협업 사례 포함"
+                        disabled={isGenerating}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50 resize-none disabled:opacity-50"
+                        rows={3}
+                      />
+                    </Collapsible.Content>
+                  </Collapsible.Root>
+                )}
               </div>
             ))}
           </div>

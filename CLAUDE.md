@@ -15,7 +15,7 @@ pnpm build           # 프로덕션 빌드
 pnpm preview         # 빌드 결과 미리보기
 ```
 
-린터, 테스트 프레임워크는 없음.
+테스트: `pnpm test` (Vitest). 린터는 없음.
 
 ## 환경 변수
 
@@ -36,10 +36,14 @@ pnpm preview         # 빌드 결과 미리보기
   - `interviewService.ts`: 면접질문(Pro), 답변평가(Flash)
   - `skillGapService.ts`: 학습경로(Flash), LinkedIn(Pro)
 - **UI 프레임워크**: Radix UI 기반 (`@radix-ui/react-collapsible`, `react-dropdown-menu`, `react-select`, `react-tabs`, `react-progress`) + `sonner` 토스트
-- **스타일링**: Tailwind CSS (CDN). 컴포넌트 내 유틸리티 클래스 직접 사용.
+- **스타일링**: Tailwind CSS v3 (로컬 PostCSS). `app.css`에 커스텀 유틸리티 클래스 정의. `tailwind.config.ts`에 테마 설정.
+- **shadcn/ui**: 초기화 완료 (`components.json`, `lib/utils.ts`). `cn()` 유틸리티 사용 가능. `tailwindcss-animate`, `class-variance-authority`, `clsx`, `tailwind-merge` 설치됨.
 - **타입**: `types.ts`에 모든 공유 인터페이스/enum 정의
 - **PDF 파싱**: `pdfjs-dist` (이력서 PDF 업로드 지원용)
-- **ReviewStep**: 2단 네비게이션 (5그룹: 핵심분석/지원서작성/면접준비/개인브랜딩/부가기능)
+- **ReviewStep**: 2단 네비게이션 (5그룹: 핵심분석/지원서작성/면접준비/개인브랜딩/부가기능). 서술형 결과 → 이력서 삽입 기능.
+- **이력서 템플릿**: `data/templates.ts`에 8종 (IT/금융/제조/공공 × 신입/경력). UploadStep에서 선택.
+- **합격 사례 DB**: `data/examples.ts`에 9건 업종별 합격 자소서 패턴. ExampleBrowserView로 조회.
+- **분석 로그**: `services/analytics.ts`에 16개 이벤트 타입. localStorage 저장, 향후 Amplitude/Posthog 연동 가능.
 
 ## 프롬프트 엔지니어링
 
@@ -70,9 +74,18 @@ pnpm preview         # 빌드 결과 미리보기
 - 구체적 동사 사용, 접속사 변화, 개인적 맥락 포함
 - 추상적 미사여구/과도한 열정 표현 금지
 
+### 프롬프트 토큰 압축 (적용 완료)
+- `services/promptBlocks.ts`: 7개 공통 블록(보안, 그라운딩, 이력서 우선순위, AI탐지, HR관점, 수치화, JD포맷) 상수로 추출
+- `services/promptCache.ts`: 중앙화된 `getAI()`, 세션별 Context Caching 인프라 (`ai.caches.create`)
+- 모든 14개 프롬프트에서 반복 블록 제거 → `systemInstruction` 파라미터로 분리
+- 결과: 프롬프트당 ~280 토큰 절감, 코드 중복 ~2,600 토큰 제거
+
+### Context Caching (적용 완료)
+- `systemInstruction`: 보안+그라운딩+이력서 우선순위 블록을 모든 API 호출에 systemInstruction으로 분리
+- `promptCache.ts`: Gemini `ai.caches.create()` 기반 세션 캐시 (이력서+JD+instruction, TTL 30분)
+- 캐시 생성 실패 시 자동 인라인 폴백 (systemInstruction + contents)
+
 ### 미적용 (향후 과제)
-- 프롬프트 토큰 압축 (현재 프롬프트가 장황해지는 추세)
-- Context Caching (공통 시스템 프롬프트 분리)
 - 업종별 맞춤화 (IT/금융/의료 등 키워드 가중치 차별화)
 
 ## 데이터 의존성 매트릭스
@@ -88,6 +101,11 @@ pnpm preview         # 빌드 결과 미리보기
 | LinkedIn / 한줄소개 | ✅ | - | - | - |
 | GitHub 근거 | - | - | ✅(필수) | ✅ |
 | 버전 관리 | ✅ | ✅ | - | - |
+
+## Health Stack
+
+- typecheck: tsc --noEmit
+- test: vitest run
 
 ## gstack
 

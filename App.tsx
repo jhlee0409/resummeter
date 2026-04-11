@@ -6,6 +6,7 @@ import { AnalysisStep } from './components/AnalysisStep';
 import { ReviewStep } from './components/ReviewStep';
 import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from './types';
 import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from './services/geminiService';
+import { track } from './services/analytics';
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.UPLOAD);
@@ -27,6 +28,13 @@ const App: React.FC = () => {
 
   const handleStartAnalysis = useCallback(async (freshGithubData?: GitHubFetchResult[]) => {
     const githubData = freshGithubData ?? userData.githubData;
+    const analysisStartTime = Date.now();
+    track({
+      type: 'analysis_start',
+      resumeLength: userData.resumeText.length,
+      jdLength: userData.jobDescription.length,
+      hasGithub: userData.githubRepos.some(r => r.url.trim() !== ''),
+    });
     setCurrentStep(AppStep.ANALYSIS);
     setAnalysisStage('jd-analysis');
 
@@ -61,6 +69,7 @@ const App: React.FC = () => {
       }
 
       setResult(finalResult);
+      track({ type: 'analysis_complete', matchScore: finalResult.matchScore, durationMs: Date.now() - analysisStartTime });
       setCurrentStep(AppStep.REVIEW);
     } catch (error) {
       console.error(error);
@@ -70,6 +79,7 @@ const App: React.FC = () => {
   }, [userData]);
 
   const handleRestart = () => {
+    track({ type: 'restart' });
     setResult(null);
     setAnalysisStage('jd-analysis');
     setUserData({ resumeText: '', jobDescription: '', githubRepos: [{ url: '', description: '' }], githubData: undefined });

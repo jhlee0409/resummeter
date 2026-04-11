@@ -2,6 +2,8 @@ import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { UserInputData, GithubRepo, PdfExtractionProgress, PdfExtractionResult, GitHubFetchResult } from '../types';
 import { validatePdfFile, extractPdfText, cancelExtraction, getErrorMessage } from '../services/pdfService';
 import { fetchAllRepos } from '../services/githubService';
+import { resumeTemplates, industries, type ResumeTemplate } from '../data/templates';
+import { track } from '../services/analytics';
 
 interface UploadStepProps {
   data: UserInputData;
@@ -25,6 +27,8 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }
   const [isFetchingGithub, setIsFetchingGithub] = useState(false);
   const [githubWarning, setGithubWarning] = useState<string | null>(null);
   const [githubExpanded, setGithubExpanded] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
+  const [templateFilter, setTemplateFilter] = useState<string | null>(null);
 
   const isParsingPdf = pdfProgress !== null;
 
@@ -356,10 +360,75 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-white/[0.06]" />
             </div>
-            <div className="relative flex justify-center">
+            <div className="relative flex justify-center gap-2">
               <span className="bg-dark-950 px-3 text-[11px] text-zinc-600 font-medium">또는 직접 입력</span>
+              <button
+                onClick={() => setTemplateOpen(!templateOpen)}
+                className="bg-dark-950 px-3 text-[11px] text-brand-400 hover:text-brand-300 font-medium transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                </svg>
+                템플릿으로 시작
+              </button>
             </div>
           </div>
+
+          {/* Template Selector */}
+          {templateOpen && (
+            <div className="animate-fade-in space-y-3 p-4 bg-dark-800/50 border border-white/[0.06] rounded-xl">
+              <div className="flex items-center justify-between">
+                <h4 className="text-[12px] font-bold text-zinc-300">업종별 이력서 템플릿</h4>
+                <button onClick={() => setTemplateOpen(false)} className="text-zinc-600 hover:text-zinc-400 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="flex gap-1.5 flex-wrap">
+                <button
+                  onClick={() => setTemplateFilter(null)}
+                  className={`px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-all ${!templateFilter ? 'bg-brand-500/15 text-brand-300 border border-brand-500/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent hover:bg-white/[0.03]'}`}
+                >
+                  전체
+                </button>
+                {industries.map(ind => (
+                  <button
+                    key={ind}
+                    onClick={() => setTemplateFilter(ind)}
+                    className={`px-2.5 py-1 text-[10px] font-semibold rounded-lg transition-all ${templateFilter === ind ? 'bg-brand-500/15 text-brand-300 border border-brand-500/20' : 'text-zinc-500 hover:text-zinc-300 border border-transparent hover:bg-white/[0.03]'}`}
+                  >
+                    {ind}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {resumeTemplates
+                  .filter(t => !templateFilter || t.industry === templateFilter)
+                  .map(t => (
+                    <button
+                      key={t.id}
+                      onClick={() => {
+                        track({ type: 'template_select', templateId: t.id, industry: t.industry });
+                        onChange('resumeText', t.template);
+                        setTemplateOpen(false);
+                      }}
+                      className="text-left p-3 rounded-lg border border-white/[0.06] hover:border-brand-500/30 hover:bg-brand-500/5 transition-all group"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-medium">{t.industry}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${t.level === 'junior' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-purple-500/10 text-purple-400'}`}>
+                          {t.level === 'junior' ? '신입' : '경력'}
+                        </span>
+                      </div>
+                      <p className="text-[12px] font-semibold text-zinc-200 group-hover:text-brand-300 transition-colors">{t.title}</p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">{t.description}</p>
+                      <p className="text-[10px] text-zinc-600 mt-1">{t.wordGuide}</p>
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
 
           <div className="relative">
             <textarea

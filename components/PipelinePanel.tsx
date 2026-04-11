@@ -181,6 +181,7 @@ function StepIndicator({ step }: { step: PipelineStep }) {
 
 export function PipelinePanel({
   onRun,
+  onNavigate,
   resumeText,
   jobDescription,
   instruction,

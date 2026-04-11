@@ -1,5 +1,6 @@
 import { Type } from "@google/genai";
 import {
+  CareerStatement,
   CareerStatementResult,
   CoverLetterConfig,
   CoverLetterResult,
@@ -7,6 +8,7 @@ import {
   GitHubFetchResult,
   CoachingResult,
   AboutStatementResult,
+  AboutStatementVersion,
 } from "../types";
 import { formatRepoInfo } from "./geminiService";
 import { getAI } from "./promptCache";
@@ -166,7 +168,7 @@ ${QUANTIFICATION_CAREER}
     const jsonText = response.text;
     if (!jsonText) throw new Error("경력기술서 생성 결과가 비어있습니다.");
 
-    const parsed = safeParseJSON(jsonText, '경력기술서 생성');
+    const parsed = safeParseJSON<{ statements: CareerStatement[]; ncsCompatible?: boolean }>(jsonText, '경력기술서 생성');
     return {
       statements: parsed.statements || [],
       ncsCompatible: parsed.ncsCompatible ?? true,
@@ -369,7 +371,7 @@ Format in Markdown with natural paragraph flow.`;
     const jsonText = response.text;
     if (!jsonText) throw new Error("커버레터 생성 결과가 비어있습니다.");
 
-    const parsed = safeParseJSON(jsonText, '커버레터 생성');
+    const parsed = safeParseJSON<{ content: string; charCount?: number; keywordsUsed?: string[] }>(jsonText, '커버레터 생성');
     return {
       content: parsed.content || '',
       language: config.language,
@@ -527,7 +529,7 @@ ${resumeText.slice(0, 2000)}
     const jsonText = response.text;
     if (!jsonText) throw new Error("한 줄 자기소개 고도화 결과가 비어있습니다.");
 
-    const parsed = safeParseJSON(jsonText, '한줄소개 고도화');
+    const parsed = safeParseJSON<{ originalAnalysis?: string; versions?: AboutStatementVersion[]; bestVersion?: string }>(jsonText, '한줄소개 고도화');
     return {
       originalInput: originalStatement,
       originalAnalysis: parsed.originalAnalysis || '',

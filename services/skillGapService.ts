@@ -137,7 +137,7 @@ ${JSON.stringify(instruction, null, 2)}
     const jsonText = response.text;
     if (!jsonText) throw new Error("학습 로드맵 생성 결과가 비어있습니다.");
 
-    const parsed = safeParseJSON(jsonText, '학습 로드맵 생성');
+    const parsed = safeParseJSON<{ items: SkillGapItem[] }>(jsonText, '학습 로드맵 생성');
 
     // 우선순위별 정렬
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
@@ -255,7 +255,7 @@ ${AI_DETECTION_LINKEDIN}
     const jsonText = response.text;
     if (!jsonText) throw new Error("LinkedIn 최적화 생성 결과가 비어있습니다.");
 
-    const parsed = safeParseJSON(jsonText, 'LinkedIn 최적화');
+    const parsed = safeParseJSON<LinkedInOptimization>(jsonText, 'LinkedIn 최적화');
 
     return {
       ...parsed,

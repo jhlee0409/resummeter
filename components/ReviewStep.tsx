@@ -1,29 +1,40 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, lazy, Suspense } from 'react';
 import { CoachingResult, UserInputData, TailoredInstructionWithRequirements, NarrativeFramework, NarrativeSectionSpec, NarrativeGenerationResult } from '../types';
 import { InsightCard } from './InsightCard';
 import { ScoreDashboard } from './ScoreDashboard';
 import { GapMapView } from './GapMapView';
 import { ActionItemCard } from './ActionItemCard';
-import { EvidenceBankView } from './EvidenceBankView';
 import { NarrativeConfigPanel } from './NarrativeConfigPanel';
 import { NarrativeSectionView } from './NarrativeSectionView';
 import { generateNarrativeSections } from '../services/geminiService';
 import * as Diff from 'diff';
 import { marked } from 'marked';
-import AtsScoreView from './AtsScoreView';
-import DetailedScoreView from './DetailedScoreView';
-import { CareerStatementView } from './CareerStatementView';
-import { CoverLetterView } from './CoverLetterView';
-import MockInterviewView from './MockInterviewView';
-import SkillGapView from './SkillGapView';
-import LinkedInOptView from './LinkedInOptView';
-import VersionManagerView from './VersionManagerView';
-import { AboutStatementView } from './AboutStatementView';
-import { PractitionerSimView } from './PractitionerSimView';
 import { PipelinePanel } from './PipelinePanel';
 import type { PipelineResults } from '../services/pipelineService';
 import { analyzeAtsScore, analyzeDetailedScore } from '../services/atsService';
+import { track } from '../services/analytics';
+import { toast } from 'sonner';
 import type { AtsScore, DetailedScore } from '../types';
+
+// Lazy-loaded tab components
+const EvidenceBankView = lazy(() => import('./EvidenceBankView').then(m => ({ default: m.EvidenceBankView })));
+const AtsScoreView = lazy(() => import('./AtsScoreView'));
+const DetailedScoreView = lazy(() => import('./DetailedScoreView'));
+const CareerStatementView = lazy(() => import('./CareerStatementView').then(m => ({ default: m.CareerStatementView })));
+const CoverLetterView = lazy(() => import('./CoverLetterView').then(m => ({ default: m.CoverLetterView })));
+const MockInterviewView = lazy(() => import('./MockInterviewView'));
+const SkillGapView = lazy(() => import('./SkillGapView'));
+const LinkedInOptView = lazy(() => import('./LinkedInOptView'));
+const VersionManagerView = lazy(() => import('./VersionManagerView'));
+const AboutStatementView = lazy(() => import('./AboutStatementView').then(m => ({ default: m.AboutStatementView })));
+const PractitionerSimView = lazy(() => import('./PractitionerSimView').then(m => ({ default: m.PractitionerSimView })));
+const ExampleBrowserView = lazy(() => import('./ExampleBrowserView').then(m => ({ default: m.ExampleBrowserView })));
+
+const TabLoading = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="w-5 h-5 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin" />
+  </div>
+);
 
 interface ReviewStepProps {
   originalData: UserInputData;
@@ -32,7 +43,7 @@ interface ReviewStepProps {
   onRestart: () => void;
 }
 
-type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement' | 'practitioner';
+type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement' | 'practitioner' | 'examples';
 
 export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, instruction, onRestart }) => {
   const [activeTab, setActiveTab] = useState<ReviewTab>('gap-map');
@@ -82,6 +93,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   };
 
   const handleGenerateNarrative = async () => {
+    track({ type: 'narrative_generate', sectionCount: narrativeSpecs.length, framework: narrativeFramework });
     setIsGeneratingNarrative(true);
     try {
       const narrativeGenResult = await generateNarrativeSections(
@@ -99,6 +111,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
   // ATS analysis
   const handleAnalyzeAts = async () => {
+    track({ type: 'ats_analyze' });
     setIsLoadingAts(true);
     try {
       const score = await analyzeAtsScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction));
@@ -109,6 +122,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
   // Detailed scoring
   const handleAnalyzeDetailed = async () => {
+    track({ type: 'detailed_score_analyze' });
     setIsLoadingDetailed(true);
     try {
       const score = await analyzeDetailedScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction));
@@ -126,6 +140,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       const next = new Set(prev);
       const isAccepting = !next.has(actionId);
       isAccepting ? next.add(actionId) : next.delete(actionId);
+      track({ type: 'coaching_apply', actionId, accepted: isAccepting });
 
       // Apply or revert the action's before→after replacement in the resume
       if (action.before && action.after) {
@@ -146,6 +161,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   };
 
   const handleDownload = () => {
+    track({ type: 'resume_download', format: 'markdown' });
     const element = document.createElement("a");
     const file = new Blob([editedResume], { type: 'text/markdown' });
     element.href = URL.createObjectURL(file);
@@ -158,6 +174,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(editedResume);
+      track({ type: 'resume_copy' });
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
@@ -224,6 +241,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     ]},
     { key: 'utilities', label: '부가 기능', tabs: [
       ...(hasGithubRepos ? [{ key: 'evidence' as ReviewTab, label: 'GitHub 근거', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' }] : []),
+      { key: 'examples', label: '합격 사례', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
       { key: 'versions', label: '버전 관리', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     ]},
   ];
@@ -239,6 +257,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const currentGroupTabs = tabGroups.find(g => g.key === activeGroup)?.tabs ?? [];
 
   const switchTab = (tab: ReviewTab) => {
+    if (tab !== activeTab) track({ type: 'tab_switch', from: activeTab, to: tab });
     setActiveTab(tab);
     const group = tabToGroup[tab];
     if (group) setActiveGroup(group);
@@ -255,6 +274,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const handleActionClick = (requirement: string) => {
     setHighlightedGap(requirement);
     switchTab('actions');
+  };
+
+  const handleInsertNarrative = (title: string, content: string) => {
+    track({ type: 'narrative_insert_resume', title });
+    const section = `\n\n## ${title}\n\n${content}`;
+    setEditedResume(prev => prev + section);
+    toast.success(`"${title}" 이력서에 삽입됨`);
+    switchTab('resume');
   };
 
   const isActionHighlighted = (item: typeof result.actionItems[number]) => {
@@ -407,9 +434,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
           </div>
 
           {/* Evidence Tab */}
-          <div className={activeTab !== 'evidence' ? 'hidden' : ''}>
-            <EvidenceBankView evidenceBank={result.evidenceBank} />
-          </div>
+          {activeTab === 'evidence' && (
+            <Suspense fallback={<TabLoading />}>
+              <EvidenceBankView evidenceBank={result.evidenceBank} />
+            </Suspense>
+          )}
 
           {/* Narrative Tab */}
           <div className={activeTab !== 'narrative' ? 'hidden' : ''}>
@@ -425,7 +454,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                       다시 설정
                     </button>
                   </div>
-                  <NarrativeSectionView sections={narrativeResult.sections} specs={narrativeSpecs} />
+                  <NarrativeSectionView sections={narrativeResult.sections} specs={narrativeSpecs} onInsertToResume={handleInsertNarrative} />
                 </div>
               ) : (
                 <NarrativeConfigPanel
@@ -442,113 +471,140 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
           </div>
 
           {/* ATS Score Tab */}
-          <div className={activeTab !== 'ats-score' ? 'hidden' : ''}>
-            {atsScore ? (
-              <AtsScoreView atsScore={atsScore} />
-            ) : (
-              <div className="text-center py-12">
-                <button
-                  onClick={handleAnalyzeAts}
-                  disabled={isLoadingAts}
-                  className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                >
-                  {isLoadingAts ? '분석 중...' : 'ATS 점수 분석'}
-                </button>
-              </div>
-            )}
-          </div>
+          {activeTab === 'ats-score' && (
+            <Suspense fallback={<TabLoading />}>
+              {atsScore ? (
+                <AtsScoreView atsScore={atsScore} />
+              ) : (
+                <div className="text-center py-12">
+                  <button
+                    onClick={handleAnalyzeAts}
+                    disabled={isLoadingAts}
+                    className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  >
+                    {isLoadingAts ? '분석 중...' : 'ATS 점수 분석'}
+                  </button>
+                </div>
+              )}
+            </Suspense>
+          )}
 
           {/* Detailed Score Tab */}
-          <div className={activeTab !== 'detailed-score' ? 'hidden' : ''}>
-            {detailedScore ? (
-              <DetailedScoreView detailedScore={detailedScore} />
-            ) : (
-              <div className="text-center py-12">
-                <button
-                  onClick={handleAnalyzeDetailed}
-                  disabled={isLoadingDetailed}
-                  className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                >
-                  {isLoadingDetailed ? '분석 중...' : '상세 점수 분석'}
-                </button>
-              </div>
-            )}
-          </div>
+          {activeTab === 'detailed-score' && (
+            <Suspense fallback={<TabLoading />}>
+              {detailedScore ? (
+                <DetailedScoreView detailedScore={detailedScore} />
+              ) : (
+                <div className="text-center py-12">
+                  <button
+                    onClick={handleAnalyzeDetailed}
+                    disabled={isLoadingDetailed}
+                    className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                  >
+                    {isLoadingDetailed ? '분석 중...' : '상세 점수 분석'}
+                  </button>
+                </div>
+              )}
+            </Suspense>
+          )}
 
           {/* Career Statement Tab */}
-          <div className={activeTab !== 'career-statement' ? 'hidden' : ''}>
-            <CareerStatementView
-              resumeText={originalData.resumeText}
-              jobDescription={originalData.jobDescription}
-              instruction={instruction}
-              githubData={originalData.githubData}
-            />
-          </div>
+          {activeTab === 'career-statement' && (
+            <Suspense fallback={<TabLoading />}>
+              <CareerStatementView
+                resumeText={originalData.resumeText}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+                githubData={originalData.githubData}
+              />
+            </Suspense>
+          )}
 
           {/* Cover Letter Tab */}
-          <div className={activeTab !== 'cover-letter' ? 'hidden' : ''}>
-            <CoverLetterView
-              resumeText={originalData.resumeText}
-              jobDescription={originalData.jobDescription}
-              instruction={instruction}
-              coachingResult={result}
-            />
-          </div>
+          {activeTab === 'cover-letter' && (
+            <Suspense fallback={<TabLoading />}>
+              <CoverLetterView
+                resumeText={originalData.resumeText}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+                coachingResult={result}
+              />
+            </Suspense>
+          )}
 
           {/* Interview Tab */}
-          <div className={activeTab !== 'interview' ? 'hidden' : ''}>
-            <MockInterviewView
-              resumeText={originalData.resumeText}
-              jobDescription={originalData.jobDescription}
-              instruction={instruction}
-            />
-          </div>
+          {activeTab === 'interview' && (
+            <Suspense fallback={<TabLoading />}>
+              <MockInterviewView
+                resumeText={originalData.resumeText}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+              />
+            </Suspense>
+          )}
 
           {/* Skill Gap Tab */}
-          <div className={activeTab !== 'skill-gap' ? 'hidden' : ''}>
-            <SkillGapView
-              gapMap={result.gapMap}
-              jobDescription={originalData.jobDescription}
-              instruction={instruction}
-            />
-          </div>
+          {activeTab === 'skill-gap' && (
+            <Suspense fallback={<TabLoading />}>
+              <SkillGapView
+                gapMap={result.gapMap}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+              />
+            </Suspense>
+          )}
 
           {/* LinkedIn Tab */}
-          <div className={activeTab !== 'linkedin' ? 'hidden' : ''}>
-            <LinkedInOptView
-              resumeText={originalData.resumeText}
-              jobDescription={originalData.jobDescription}
-              instruction={instruction}
-            />
-          </div>
+          {activeTab === 'linkedin' && (
+            <Suspense fallback={<TabLoading />}>
+              <LinkedInOptView
+                resumeText={originalData.resumeText}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+              />
+            </Suspense>
+          )}
+
+          {/* Examples Tab */}
+          {activeTab === 'examples' && (
+            <Suspense fallback={<TabLoading />}>
+              <ExampleBrowserView />
+            </Suspense>
+          )}
 
           {/* Versions Tab */}
-          <div className={activeTab !== 'versions' ? 'hidden' : ''}>
-            <VersionManagerView
-              currentResumeText={editedResume}
-              currentJobDescription={originalData.jobDescription}
-              currentScore={result.matchScore}
-            />
-          </div>
+          {activeTab === 'versions' && (
+            <Suspense fallback={<TabLoading />}>
+              <VersionManagerView
+                currentResumeText={editedResume}
+                currentJobDescription={originalData.jobDescription}
+                currentScore={result.matchScore}
+              />
+            </Suspense>
+          )}
 
           {/* Practitioner Simulation Tab */}
-          <div className={activeTab !== 'practitioner' ? 'hidden' : ''}>
-            <PractitionerSimView
-              resumeText={originalData.resumeText}
-              jobDescription={originalData.jobDescription}
-              instruction={instruction}
-            />
-          </div>
+          {activeTab === 'practitioner' && (
+            <Suspense fallback={<TabLoading />}>
+              <PractitionerSimView
+                resumeText={originalData.resumeText}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+              />
+            </Suspense>
+          )}
 
           {/* About Statement Tab */}
-          <div className={activeTab !== 'about-statement' ? 'hidden' : ''}>
-            <AboutStatementView
-              resumeText={originalData.resumeText}
-              jobDescription={originalData.jobDescription}
-              instruction={instruction}
-              coachingResult={result}
-            />
-          </div>
+          {activeTab === 'about-statement' && (
+            <Suspense fallback={<TabLoading />}>
+              <AboutStatementView
+                resumeText={originalData.resumeText}
+                jobDescription={originalData.jobDescription}
+                instruction={instruction}
+                coachingResult={result}
+              />
+            </Suspense>
+          )}
 
           {/* Resume Tab */}
           <div className={activeTab !== 'resume' ? 'hidden' : ''}>
