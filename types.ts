@@ -153,6 +153,7 @@ export interface CoachingResult {
   optimizedResume: string;
   insights: Insight[];
   evidenceBank?: EvidenceBank;
+  scoringResult?: ScoringResult;    // Scoring Engine 결과 (규칙 기반)
 }
 
 // -- Narrative Framework Types --
@@ -487,4 +488,38 @@ export interface GapAnalysisResult {
   missingEvidence: string[];     // 이력서에 추가해야 할 경험/성과
   overallAssessment: string;     // 2-3문장 종합 평가
   generatedAt: string;
+}
+
+// ─── Scoring Engine ───
+
+export type FitLevel = 'strong_match' | 'conditional' | 'weak' | 'not_recommended' | 'data_insufficient';
+
+export interface Penalty {
+  category: string;
+  points: number;
+  reason: string;
+}
+
+export interface ScoringResult {
+  matchScore: number;            // 0-100, 규칙 기반
+  level: FitLevel;
+  penalties: Penalty[];
+  warnings: string[];
+  breakdown: {
+    hardRequirement: number;     // 경력+학력 감점
+    hardSkill: number;           // 기술스택 감점
+    experience: number;          // 경험 관련성 감점
+    softSkill: number;           // 소프트스킬 감점
+    domain: number;              // 도메인 키워드 감점
+  };
+}
+
+export interface ParsedRequirements {
+  minExperience: number | null;
+  education: string | null;
+}
+
+export interface ParsedResume {
+  totalExperience: number | null; // null이면 파싱 실패
+  companies: { name: string; months: number }[];
 }

@@ -8,6 +8,7 @@ import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInst
 import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from './services/geminiService';
 import { track } from './services/analytics';
 import { getCachedAnalysis, setCachedAnalysis, clearAnalysisCache } from './services/analysisCache';
+import { calculateScore } from './services/scoringEngine';
 import { toast } from 'sonner';
 
 const App: React.FC = () => {
@@ -85,10 +86,14 @@ const App: React.FC = () => {
         }
       }
 
-      setResult(finalResult);
+      // Scoring Engine: LLM 점수 대신 규칙 기반 점수로 대체
+      const scoring = calculateScore(finalResult.gapMap, instruction, userData.resumeText, userData.jobDescription);
+      const scoredResult = { ...finalResult, matchScore: scoring.matchScore, scoringResult: scoring };
+
+      setResult(scoredResult);
       // Cache: 분석 결과 저장
-      setCachedAnalysis(userData.resumeText, userData.jobDescription, instruction, finalResult, userData.companyContext ?? null);
-      track({ type: 'analysis_complete', matchScore: finalResult.matchScore, durationMs: Date.now() - analysisStartTime });
+      setCachedAnalysis(userData.resumeText, userData.jobDescription, instruction, scoredResult, userData.companyContext ?? null);
+      track({ type: 'analysis_complete', matchScore: scoring.matchScore, durationMs: Date.now() - analysisStartTime });
       setCurrentStep(AppStep.REVIEW);
     } catch (error) {
       console.error(error);
