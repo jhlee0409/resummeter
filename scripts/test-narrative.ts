@@ -13,7 +13,7 @@ process.env.GEMINI_API_KEY = apiKey;
 process.env.API_KEY = apiKey;
 
 const { generateTailoredInstruction, coachResume, generateNarrativeSections } = await import('../services/geminiService');
-const { extractCompanyName, researchCompany } = await import('../services/companyResearchService');
+const { researchCompany, researchJobRole, mergeResearchResults } = await import('../services/companyResearchService');
 import type { NarrativeSectionSpec } from '../types';
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');
@@ -30,8 +30,12 @@ console.log('  완료');
 
 // Step 2: 회사+직무 리서치
 console.log('\n🏢 회사+직무 정보 수집 중...');
-const companyName = await extractCompanyName(jdText);
-const companyCtx = companyName ? await researchCompany(companyName, jdText) : null;
+const companyName = '채널톡';
+const [companyInfo, roleInfo] = await Promise.all([
+  researchCompany(companyName),
+  researchJobRole('Forward Deployed Engineer', companyName),
+]);
+const companyCtx = mergeResearchResults(companyInfo, roleInfo);
 console.log(`  완료 (${companyCtx?.companyName}, 신뢰도 ${Math.round((companyCtx?.confidence || 0) * 100)}%)`);
 
 // Step 3: 코칭 (서술형 생성에 필요)

@@ -46,6 +46,12 @@ pnpm preview         # 빌드 결과 미리보기
 - **분석 로그**: `services/analytics.ts`에 16개 이벤트 타입. localStorage 저장, 향후 Amplitude/Posthog 연동 가능.
 - **회사 컨텍스트**: `services/companyResearchService.ts`. Gemini Google Search grounding으로 회사 정보 자동 수집. `CompanyContext` 타입.
 - **역량 갭 분석**: `services/gapAnalysisService.ts`. 이력서 vs JD+회사컨텍스트 역량 매칭/갭 정밀 분석. `GapAnalysisView` 컴포넌트.
+- **Scoring Engine**: `services/scoringEngine.ts`. 규칙 기반 100점 감점 모델. LLM은 분석만, 점수는 엔진이 계산.
+  - 1단계: Hard Requirement (경력/학력) — JD 필수/우대 구분 반영
+  - 2단계: gapMap 카테고리별 감점 — JD importance로 가중치 동적 조절 (0.5~1.0)
+  - 3단계: 도메인 키워드 시맨틱 매칭 — `keywordAliases`로 동의어/관련 기술 매칭
+  - 레벨: strong_match(90+) / conditional(70+) / weak(50+) / not_recommended(<50) / data_insufficient
+  - `ScoreDashboard` 컴포넌트: 레벨 라벨, 감점 breakdown bar, penalty 상세
 
 ## 프롬프트 엔지니어링
 

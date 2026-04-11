@@ -15,7 +15,7 @@ process.env.API_KEY = apiKey;
 
 // 서비스 임포트
 const { generateTailoredInstruction, coachResume } = await import('../services/geminiService');
-const { extractCompanyName, researchCompany } = await import('../services/companyResearchService');
+const { researchCompany, researchJobRole, mergeResearchResults } = await import('../services/companyResearchService');
 const { analyzeGap } = await import('../services/gapAnalysisService');
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');
@@ -37,17 +37,20 @@ console.log(`  키워드 (${instruction.keywords.length}): ${instruction.keyword
 console.log(`  Hard Skills: ${instruction.evaluationCriteria.hardSkills.join(', ')}`);
 console.log(`  Soft Skills: ${instruction.evaluationCriteria.softSkills.join(', ')}`);
 
-// Step 2: 회사 정보 수집
-console.log('\n🏢 Step 2: 회사 정보 수집 중...');
+// Step 2: 회사+직무 정보 수집
+console.log('\n🏢 Step 2: 회사+직무 정보 수집 중...');
 const startCompany = Date.now();
-let companyName: string | null = null;
-let companyCtx: Awaited<ReturnType<typeof researchCompany>> | null = null;
+const companyName = '채널톡';
+let companyCtx: Awaited<ReturnType<typeof mergeResearchResults>> = null;
 try {
-  companyName = await extractCompanyName(jdText);
   console.log(`  회사명: ${companyName}`);
-  if (companyName) {
-    companyCtx = await researchCompany(companyName, jdText);
-    console.log(`  완료 (${Date.now() - startCompany}ms)`);
+  const [companyInfo, roleInfo] = await Promise.all([
+    researchCompany(companyName),
+    researchJobRole('Forward Deployed Engineer', companyName),
+  ]);
+  companyCtx = mergeResearchResults(companyInfo, roleInfo);
+  console.log(`  완료 (${Date.now() - startCompany}ms)`);
+  if (companyCtx) {
     console.log(`  신뢰도: ${Math.round(companyCtx.confidence * 100)}%`);
     console.log(`  기술스택: ${companyCtx.techStack.join(', ')}`);
     console.log(`  문화: ${companyCtx.culture.slice(0, 100)}...`);
