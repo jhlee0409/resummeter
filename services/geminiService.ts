@@ -273,7 +273,12 @@ ${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}${HR_PER
 [검증 규칙]
 - before 필드에는 이력서 원문에서 글자 하나 바꾸지 않고 정확히 복사한 문장만 허용됩니다.
 - 이력서에 없는 기술명이 before에 등장하면 해당 분석 항목은 무효입니다.
-- missing인 경우 before는 가장 관련성 높은 이력서 문장을 인용하거나, 해당 영역이 완전히 없으면 "(이력서에 관련 내용 없음)"으로 표시하십시오.`;
+- missing인 경우 before는 가장 관련성 높은 이력서 문장을 인용하거나, 해당 영역이 완전히 없으면 "(이력서에 관련 내용 없음)"으로 표시하십시오.
+
+[매칭 정밀도 규칙]
+- "고객과 직접 소통하며", "사용자 관점에서 재구성" 같은 이력서 문장은 "고객 중심 사고"의 직접적 증거입니다. 이러한 문장이 있으면 weak가 아닌 strong으로 판정하십시오.
+- 동사+목적어 패턴이 JD 요구사항과 의미적으로 일치하면 strong입니다. 정확한 키워드가 없어도 행동 증거가 있으면 인정하십시오.
+- weak는 "관련 경험이 있지만 구체적 증거/수치가 부족한 경우"에만 사용하십시오.`;
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
@@ -321,7 +326,7 @@ ${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}${HR_PER
                 required: ["id", "targetSection", "before", "issue", "direction", "priority", "category", "relevantJdKeywords"],
               },
             },
-            quickWins: { type: Type.ARRAY, items: { type: Type.STRING }, description: "즉시 적용 가능한 개선 포인트 3-5개" },
+            quickWins: { type: Type.ARRAY, items: { type: Type.STRING }, description: "즉시 적용 가능한 개선 포인트 3-5개. 반드시 이력서에 이미 있는 내용의 표현 개선만 제안. 이력서에 없는 기술/경험/자격증을 추가하라는 제안 금지. 이름/연락처 같은 기본 정보 수정 제안 금지." },
           },
           required: ["matchScore", "summary", "gapMap", "analysisItems", "quickWins"],
         },
@@ -453,6 +458,8 @@ ${AI_DETECTION_KO_BASE}
 - after에 이력서 원문에 없는 고유명사(기술명, 회사명, 프레임워크명)가 등장하면 해당 항목은 무효입니다.
 ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. after 문장에 직접 삽입하지 마십시오.' : ''}
 - after가 원문과 완전히 다른 문장이 되어서는 안 됩니다. 원문의 골격을 유지하면서 표현만 개선하십시오.
+- quickWins에 이력서에 없는 기술/라이브러리/자격증을 추가하라는 제안은 절대 금지입니다.
+- 이름, 이메일, 연락처 같은 기본 개인정보는 수정 대상이 아닙니다. actionItems에서 제외하십시오.
 
 [자기 검증 — 반드시 수행]
 생성 완료 후 모든 actionItem에 대해 검증하십시오:
