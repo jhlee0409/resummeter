@@ -7,7 +7,8 @@ import { ReviewStep } from '../components/ReviewStep';
 import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from '../types';
 import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from '../services/geminiService';
 import { track } from '../services/analytics';
-import { getCachedAnalysis, setCachedAnalysis } from '../features/review/services/analysisCache';
+import { getCachedAnalysis, setCachedAnalysis, getCachedAnalysisByKey } from '../features/review/services/analysisCache';
+import { PreviousAnalysesPanel } from '../features/review/PreviousAnalysesPanel';
 import { calculateScore } from '../core/scoring/scoringEngine';
 import { researchCompany, researchJobRole, mergeResearchResults } from '../core/research/companyResearch';
 import { getOrCreateSessionCache, invalidateCache, type SessionCache } from '../services/promptCache';
@@ -49,6 +50,22 @@ const App: React.FC = () => {
     track({ type: 'analysis_complete', matchScore: cached.result.matchScore, durationMs: 0 });
     setCurrentStep(AppStep.REVIEW);
   }, [userData.resumeText, userData.jobDescription]);
+
+  const handleLoadByCacheKey = useCallback((cacheKey: string) => {
+    const cached = getCachedAnalysisByKey(cacheKey);
+    if (!cached) {
+      toast.error('이전 분석 결과를 찾을 수 없습니다');
+      return;
+    }
+    setInstruction(cached.instruction);
+    setResult(cached.result);
+    if (cached.companyContext) {
+      setUserData(prev => ({ ...prev, companyContext: cached.companyContext }));
+    }
+    toast.success('이전 분석 결과를 불러왔습니다');
+    track({ type: 'analysis_complete', matchScore: cached.result.matchScore, durationMs: 0 });
+    setCurrentStep(AppStep.REVIEW);
+  }, []);
 
   const handleStartAnalysis = useCallback(async (freshGithubData?: GitHubFetchResult[]) => {
     const githubData = freshGithubData ?? userData.githubData;
@@ -188,7 +205,8 @@ const App: React.FC = () => {
 
           <div className={currentStep !== AppStep.ANALYSIS ? 'mt-8' : ''}>
             {currentStep === AppStep.UPLOAD && (
-              <div className="animate-fade-in-up">
+              <div className="animate-fade-in-up space-y-6">
+                <PreviousAnalysesPanel onLoad={handleLoadByCacheKey} />
                 <UploadStep
                   data={userData}
                   onChange={handleInputChange}

@@ -126,3 +126,48 @@ export function hasCachedAnalysis(resume: string, jd: string): boolean {
   const entries = getAllEntries();
   return entries.some(e => e.cacheKey === key && e.resumeLength === resume.length && e.jdLength === jd.length);
 }
+
+export interface CachedAnalysisListItem {
+  cacheKey: string;
+  companyName: string | null;
+  matchScore: number;
+  createdAt: string;
+  resumeLength: number;
+  jdLength: number;
+}
+
+/** 모든 캐시 목록 (최신순) */
+export function listCachedAnalyses(): CachedAnalysisListItem[] {
+  return getAllEntries()
+    .slice()
+    .reverse()
+    .map(e => ({
+      cacheKey: e.cacheKey,
+      companyName: e.companyContext?.companyName ?? null,
+      matchScore: e.result.matchScore,
+      createdAt: e.createdAt,
+      resumeLength: e.resumeLength,
+      jdLength: e.jdLength,
+    }));
+}
+
+/** 캐시 키로 직접 로드 (이력서/JD 없어도 가능) */
+export function getCachedAnalysisByKey(cacheKey: string): { instruction: TailoredInstructionWithRequirements; result: CoachingResult; companyContext: CompanyContext | null } | null {
+  const entries = getAllEntries();
+  const match = entries.find(e => e.cacheKey === cacheKey);
+  if (!match) return null;
+  const updated = entries.filter(e => e.cacheKey !== cacheKey);
+  updated.push({ ...match, createdAt: new Date().toISOString() });
+  saveAllEntries(updated);
+  return {
+    instruction: match.instruction,
+    result: match.result,
+    companyContext: match.companyContext,
+  };
+}
+
+/** 특정 캐시 삭제 */
+export function deleteCachedAnalysis(cacheKey: string): void {
+  const entries = getAllEntries().filter(e => e.cacheKey !== cacheKey);
+  saveAllEntries(entries);
+}
