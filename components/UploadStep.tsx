@@ -11,9 +11,10 @@ interface UploadStepProps {
   data: UserInputData;
   onChange: <K extends keyof UserInputData>(field: K, value: UserInputData[K]) => void;
   onNext: (githubData?: import('../types').GitHubFetchResult[]) => void;
+  onLoadCached?: () => void;
 }
 
-export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }) => {
+export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, onLoadCached }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
 
@@ -673,34 +674,47 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext }
               ⚠️ {githubWarning}
             </div>
           )}
-          <button
-            onClick={handleStartWithGithub}
-            disabled={!isFormValid || isParsingPdf || isFetchingGithub}
-            className={`group relative px-7 py-3 rounded-xl font-bold text-sm transition-all duration-200 flex items-center gap-2 overflow-hidden
-              ${isFormValid && !isParsingPdf && !isFetchingGithub
-                ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 hover:-translate-y-0.5 active:translate-y-0'
-                : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}
-            `}
-          >
-            {isFetchingGithub ? (
-              <>
-                <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          <div className="flex items-center gap-2">
+            {isFormValid && onLoadCached && hasCachedAnalysis(data.resumeText, data.jobDescription) && (
+              <button
+                onClick={onLoadCached}
+                disabled={isParsingPdf || isFetchingGithub}
+                className="px-5 py-3 rounded-xl font-semibold text-sm transition-all duration-200 flex items-center gap-2 border border-zinc-700 text-zinc-300 hover:bg-zinc-800/50 hover:border-zinc-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="같은 이력서+JD 조합의 캐시된 분석 결과를 불러옵니다"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                GitHub 데이터 수집 중...
-              </>
-            ) : (
-              <>
-                {isFormValid && hasCachedAnalysis(data.resumeText, data.jobDescription)
-                  ? '이전 결과 불러오기'
-                  : 'AI 분석 시작'}
-                <svg className={`w-4 h-4 transition-transform ${isFormValid ? 'group-hover:translate-x-0.5' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </>
+                이전 결과 불러오기
+              </button>
             )}
-          </button>
+            <button
+              onClick={handleStartWithGithub}
+              disabled={!isFormValid || isParsingPdf || isFetchingGithub}
+              className={`group relative px-7 py-3 rounded-xl font-bold text-sm transition-all duration-200 flex items-center gap-2 overflow-hidden
+                ${isFormValid && !isParsingPdf && !isFetchingGithub
+                  ? 'bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg shadow-brand-500/30 hover:shadow-xl hover:shadow-brand-500/40 hover:-translate-y-0.5 active:translate-y-0'
+                  : 'bg-zinc-800 text-zinc-600 cursor-not-allowed'}
+              `}
+            >
+              {isFetchingGithub ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  GitHub 데이터 수집 중...
+                </>
+              ) : (
+                <>
+                  AI 분석 시작
+                  <svg className={`w-4 h-4 transition-transform ${isFormValid ? 'group-hover:translate-x-0.5' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

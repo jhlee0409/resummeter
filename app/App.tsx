@@ -34,23 +34,24 @@ const App: React.FC = () => {
     setUserData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleStartAnalysis = useCallback(async (freshGithubData?: GitHubFetchResult[]) => {
-    const githubData = freshGithubData ?? userData.githubData;
-
-    // Cache check: 같은 이력서+JD 조합의 분석 결과가 있으면 즉시 복원
+  const handleLoadCached = useCallback(() => {
     const cached = getCachedAnalysis(userData.resumeText, userData.jobDescription);
-    if (cached) {
-      setInstruction(cached.instruction);
-      setResult(cached.result);
-      if (cached.companyContext) {
-        setUserData(prev => ({ ...prev, companyContext: cached.companyContext }));
-      }
-      toast.success('이전 분석 결과를 불러왔습니다');
-      track({ type: 'analysis_complete', matchScore: cached.result.matchScore, durationMs: 0 });
-      setCurrentStep(AppStep.REVIEW);
+    if (!cached) {
+      toast.error('이전 분석 결과를 찾을 수 없습니다');
       return;
     }
+    setInstruction(cached.instruction);
+    setResult(cached.result);
+    if (cached.companyContext) {
+      setUserData(prev => ({ ...prev, companyContext: cached.companyContext }));
+    }
+    toast.success('이전 분석 결과를 불러왔습니다');
+    track({ type: 'analysis_complete', matchScore: cached.result.matchScore, durationMs: 0 });
+    setCurrentStep(AppStep.REVIEW);
+  }, [userData.resumeText, userData.jobDescription]);
 
+  const handleStartAnalysis = useCallback(async (freshGithubData?: GitHubFetchResult[]) => {
+    const githubData = freshGithubData ?? userData.githubData;
     const analysisStartTime = Date.now();
     track({
       type: 'analysis_start',
@@ -192,6 +193,7 @@ const App: React.FC = () => {
                   data={userData}
                   onChange={handleInputChange}
                   onNext={handleStartAnalysis}
+                  onLoadCached={handleLoadCached}
                 />
               </div>
             )}
