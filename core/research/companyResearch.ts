@@ -5,12 +5,13 @@
  */
 
 import { getAI } from '../../services/promptCache';
+import { MODELS } from '../../shared/api/geminiClient';
 import { withRetry } from '../../services/retry';
 import { safeParseJSON } from '../../services/validation';
 import { classifyError } from '../../services/errors';
 import type { CompanyInfo, JobRoleInfo, CompanyContext } from '../../types';
 
-const RESEARCH_MODEL = 'gemini-2.5-flash-lite';
+const RESEARCH_MODEL = MODELS.flashLite;
 
 // ─── 리서치 캐시 (localStorage, LRU 10건, TTL 24h) ───
 

@@ -15,8 +15,8 @@ process.env.API_KEY = apiKey;
 
 // 서비스 임포트
 const { generateTailoredInstruction, coachResume } = await import('../services/geminiService');
-const { researchCompany, researchJobRole, mergeResearchResults } = await import('../services/companyResearchService');
-const { analyzeGap } = await import('../services/gapAnalysisService');
+const { researchCompany, researchJobRole, mergeResearchResults } = await import('../core/research/companyResearch');
+const { analyzeGap } = await import('../features/gap-analysis/service');
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');
 const jdText = readFileSync('/tmp/resummeter-jd.txt', 'utf-8');

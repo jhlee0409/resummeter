@@ -1,6 +1,6 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import { TailoredInstructionWithRequirements } from "../../types";
-import { getAI } from "../../shared/api/geminiClient";
+import { getAI, MODELS } from "../../shared/api/geminiClient";
 import { withRetry } from "../../shared/api/retry";
 import { validateJDInput } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
@@ -37,7 +37,7 @@ export async function generateTailoredInstruction(
   validateJDInput(jobDescription);
 
   // 업종 자동 감지
-  const { detectIndustry, buildIndustryContext } = await import('../../services/industryDetect');
+  const { detectIndustry, buildIndustryContext } = await import('../research/industryDetect');
   const detectedIndustry = detectIndustry(jobDescription);
   const industryContext = buildIndustryContext(detectedIndustry);
 
@@ -77,7 +77,7 @@ export async function generateTailoredInstruction(
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: MODELS.flash,
       contents: metaPrompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL].join('\n\n'),

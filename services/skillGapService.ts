@@ -8,8 +8,9 @@ import type {
   LinkedInOptimization,
   CompanyContext,
 } from "../types";
-import { formatCompanyContext } from './companyResearchService';
+import { formatCompanyContext } from '../core/research/companyResearch';
 import { getAI } from "./promptCache";
+import { MODELS } from "../shared/api/geminiClient";
 import {
   RESUME_HIERARCHY,
   GROUNDING_SKILLGAP,
@@ -129,7 +130,7 @@ ${JSON.stringify(instruction, null, 2)}
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: MODELS.flash,
       contents: prompt,
       config: {
         systemInstruction: [RESUME_HIERARCHY, GROUNDING_SKILLGAP].join('\n\n'),
@@ -265,7 +266,7 @@ BAD experience highlight: "서버 개발 담당" (성과 없음, 기술 없음)
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: MODELS.pro,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_RESUME_ONLY, RESUME_HIERARCHY].join('\n\n'),

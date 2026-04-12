@@ -5,11 +5,12 @@
 
 import { Type, ThinkingLevel } from '@google/genai';
 import { getAI } from '../../services/promptCache';
+import { MODELS } from '../../shared/api/geminiClient';
 import { withRetry } from '../../services/retry';
 import { validateResumeInput, validateJDInput, safeParseJSON } from '../../services/validation';
 import { classifyError } from '../../services/errors';
 import { SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS } from '../../services/promptBlocks';
-import { formatCompanyContext } from '../../services/companyResearchService';
+import { formatCompanyContext } from '../../core/research/companyResearch';
 import type { CompanyContext, GapAnalysisResult, GapMatch, TailoredInstructionWithRequirements } from '../../types';
 
 export async function analyzeGap(
@@ -95,7 +96,7 @@ BAD (피하세요):
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODELS.pro,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS].join('\n\n'),

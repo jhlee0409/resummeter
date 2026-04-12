@@ -1,11 +1,11 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
 import { UserInputData, GithubRepo, PdfExtractionProgress, PdfExtractionResult, GitHubFetchResult, CompanyContext } from '../types';
-import { validatePdfFile, extractPdfText, cancelExtraction, getErrorMessage } from '../services/pdfService';
-import { fetchAllRepos } from '../services/githubService';
+import { validatePdfFile, extractPdfText, cancelExtraction, getErrorMessage } from '../features/upload/services/pdfService';
+import { fetchAllRepos } from '../features/upload/services/githubService';
 // company research is now triggered at analysis start in App.tsx
 import { resumeTemplates, industries, type ResumeTemplate } from '../data/templates';
 import { track } from '../services/analytics';
-import { hasCachedAnalysis } from '../services/analysisCache';
+import { hasCachedAnalysis } from '../features/review/services/analysisCache';
 
 interface UploadStepProps {
   data: UserInputData;

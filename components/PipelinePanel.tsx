@@ -6,7 +6,7 @@ import {
   type PipelineProgress,
   type PipelineResults,
   type PipelineStep,
-} from '../services/pipelineService';
+} from '../features/review/services/pipelineService';
 
 interface PipelinePanelProps {
   onRun: (type: PipelineType, results: PipelineResults) => void;

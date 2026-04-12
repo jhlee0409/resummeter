@@ -15,8 +15,8 @@ process.env.GEMINI_API_KEY = apiKey;
 process.env.API_KEY = apiKey;
 
 const { generateTailoredInstruction, coachResume } = await import('../services/geminiService');
-const { calculateScore, LEVEL_LABELS } = await import('../services/scoringEngine');
-const { parseResumeExperience } = await import('../services/requirementParser');
+const { calculateScore, LEVEL_LABELS } = await import('../core/scoring/scoringEngine');
+const { parseResumeExperience } = await import('../core/scoring/requirementParser');
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');
 

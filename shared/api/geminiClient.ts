@@ -96,11 +96,18 @@ function buildContextBlock(
 }
 
 // ── 캐시 생성/조회 ──────────────────────────────────────────
-export type ModelTier = "flash" | "pro";
+export type ModelTier = "flash" | "pro" | "flash-lite";
 
-const MODEL_MAP: Record<ModelTier, string> = {
+export const MODELS = {
   flash: "gemini-3-flash-preview",
   pro: "gemini-3-pro-preview",
+  flashLite: "gemini-2.5-flash-lite",
+} as const;
+
+const MODEL_MAP: Record<ModelTier, string> = {
+  flash: MODELS.flash,
+  pro: MODELS.pro,
+  "flash-lite": MODELS.flashLite,
 };
 
 /**
@@ -156,6 +163,18 @@ export async function getOrCreateSessionCache(
   else _proCache = session;
 
   return session;
+}
+
+/**
+ * 세션 캐시가 있으면 cachedContent, 없으면 systemInstruction 반환.
+ * analyzeResume, generateCoaching처럼 프롬프트에 컨텍스트가 인라인으로 있는 경우 사용.
+ */
+export function getCacheFields(
+  sessionCache: SessionCache | null | undefined,
+  systemBlocks: string[],
+): { cachedContent: string } | { systemInstruction: string } {
+  if (sessionCache?.cacheName) return { cachedContent: sessionCache.cacheName };
+  return { systemInstruction: systemBlocks.join('\n\n') };
 }
 
 /**

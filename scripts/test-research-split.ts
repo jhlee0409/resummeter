@@ -11,8 +11,8 @@ if (!apiKey) { console.error('GEMINI_API_KEY not found'); process.exit(1); }
 process.env.GEMINI_API_KEY = apiKey;
 process.env.API_KEY = apiKey;
 
-const { researchCompany, researchJobRole, mergeResearchResults } = await import('../services/companyResearchService');
-const { calculateScore, LEVEL_LABELS } = await import('../services/scoringEngine');
+const { researchCompany, researchJobRole, mergeResearchResults } = await import('../core/research/companyResearch');
+const { calculateScore, LEVEL_LABELS } = await import('../core/scoring/scoringEngine');
 const { generateTailoredInstruction, coachResume } = await import('../services/geminiService');
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');

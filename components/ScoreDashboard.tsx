@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { CoachingResult, UserInputData } from '../types';
-import { LEVEL_LABELS } from '../services/scoringEngine';
+import { LEVEL_LABELS } from '../core/scoring/scoringEngine';
 
 interface ScoreDashboardProps {
   result: CoachingResult;

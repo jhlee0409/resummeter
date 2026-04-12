@@ -1,7 +1,8 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import type { AtsScore, DetailedScore, CompanyContext } from "../types";
-import { formatCompanyContext } from './companyResearchService';
+import { formatCompanyContext } from '../core/research/companyResearch';
 import { getAI } from "./promptCache";
+import { MODELS } from "../shared/api/geminiClient";
 import {
   SECURITY_RULE,
   GROUNDING_BASIC,
@@ -104,7 +105,7 @@ JSON 스키마에 맞춰 반환하세요.
     const systemInstruction = [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n');
 
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: MODELS.flash,
       contents: prompt,
       config: {
         systemInstruction,
@@ -279,7 +280,7 @@ JSON 스키마에 맞춰 반환하세요.
     const systemInstruction = [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n');
 
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-pro-preview",
+      model: MODELS.pro,
       contents: prompt,
       config: {
         systemInstruction,

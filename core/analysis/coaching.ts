@@ -1,6 +1,6 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import { CoachingResult, TailoredInstructionWithRequirements, GithubRepo, GitHubFetchResult, Evidence, GapMapItem, ActionItem, CompanyContext } from "../../types";
-import { getAI, type SessionCache } from "../../shared/api/geminiClient";
+import { getAI, MODELS, getCacheFields, type SessionCache } from "../../shared/api/geminiClient";
 import { withRetry } from "../../shared/api/retry";
 import { safeParseJSON, validateOutput, CoachingOutputSchema } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
@@ -29,7 +29,7 @@ async function generateCoaching(
 ): Promise<CoachingResult> {
   const repoInfo = formatRepoInfo(githubRepos, githubData);
   const today = new Date().toISOString().split('T')[0];
-  const { buildIndustryContext } = await import('../../services/industryDetect');
+  const { buildIndustryContext } = await import('../research/industryDetect');
   const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
@@ -158,13 +158,11 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
 3. evidence.content가 실제 JD 원문 또는 GitHub 데이터에서 확인 가능한가?
 위반 항목이 있으면 해당 항목을 수정한 후 최종 결과를 반환하십시오.`;
 
-  const coachCacheFields = sessionCache?.cacheName
-    ? { cachedContent: sessionCache.cacheName }
-    : { systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n') };
+  const coachCacheFields = getCacheFields(sessionCache, [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY]);
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODELS.pro,
       contents: prompt,
       config: {
         ...coachCacheFields,
@@ -261,7 +259,7 @@ ${repoInfo ? '- GitHub 데이터는 evidence.content에만 기재하십시오. a
 // Fallback: flatten evidence out of actionItems (schema depth 에러 대비)
 async function generateCoachingWithFallbackSchema(prompt: string, cacheOverride?: Record<string, unknown>): Promise<CoachingResult> {
   const response = await getAI().models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: MODELS.pro,
     contents: prompt,
     config: {
       ...(cacheOverride || {}),

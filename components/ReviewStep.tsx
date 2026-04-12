@@ -11,7 +11,7 @@ import { generateNarrativeSections } from '../services/geminiService';
 import * as Diff from 'diff';
 import { marked } from 'marked';
 import { PipelinePanel } from './PipelinePanel';
-import type { PipelineResults } from '../services/pipelineService';
+import type { PipelineResults } from '../features/review/services/pipelineService';
 import { analyzeAtsScore, analyzeDetailedScore } from '../services/atsService';
 import { track } from '../services/analytics';
 import { toast } from 'sonner';
@@ -21,16 +21,16 @@ import type { AtsScore, DetailedScore } from '../types';
 const EvidenceBankView = lazy(() => import('./EvidenceBankView').then(m => ({ default: m.EvidenceBankView })));
 const AtsScoreView = lazy(() => import('./AtsScoreView'));
 const DetailedScoreView = lazy(() => import('./DetailedScoreView'));
-const CareerStatementView = lazy(() => import('./CareerStatementView').then(m => ({ default: m.CareerStatementView })));
-const CoverLetterView = lazy(() => import('./CoverLetterView').then(m => ({ default: m.CoverLetterView })));
-const MockInterviewView = lazy(() => import('./MockInterviewView'));
-const SkillGapView = lazy(() => import('./SkillGapView'));
-const LinkedInOptView = lazy(() => import('./LinkedInOptView'));
-const VersionManagerView = lazy(() => import('./VersionManagerView'));
-const AboutStatementView = lazy(() => import('./AboutStatementView').then(m => ({ default: m.AboutStatementView })));
-const PractitionerSimView = lazy(() => import('./PractitionerSimView').then(m => ({ default: m.PractitionerSimView })));
-const ExampleBrowserView = lazy(() => import('./ExampleBrowserView').then(m => ({ default: m.ExampleBrowserView })));
-const GapAnalysisView = lazy(() => import('./GapAnalysisView').then(m => ({ default: m.GapAnalysisView })));
+const CareerStatementView = lazy(() => import('../features/career-statement/CareerStatementView').then(m => ({ default: m.CareerStatementView })));
+const CoverLetterView = lazy(() => import('../features/cover-letter/CoverLetterView').then(m => ({ default: m.CoverLetterView })));
+const MockInterviewView = lazy(() => import('../features/interview/MockInterviewView'));
+const SkillGapView = lazy(() => import('../features/skill-gap/SkillGapView'));
+const LinkedInOptView = lazy(() => import('../features/linkedin/LinkedInOptView'));
+const VersionManagerView = lazy(() => import('../features/versions/VersionManagerView'));
+const AboutStatementView = lazy(() => import('../features/about-statement/AboutStatementView').then(m => ({ default: m.AboutStatementView })));
+const PractitionerSimView = lazy(() => import('../features/practitioner/PractitionerSimView').then(m => ({ default: m.PractitionerSimView })));
+const ExampleBrowserView = lazy(() => import('../features/examples/ExampleBrowserView').then(m => ({ default: m.ExampleBrowserView })));
+const GapAnalysisView = lazy(() => import('../features/gap-analysis/GapAnalysisView').then(m => ({ default: m.GapAnalysisView })));
 
 const TabLoading = () => (
   <div className="flex items-center justify-center py-12">

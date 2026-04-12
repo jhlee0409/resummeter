@@ -8,8 +8,8 @@ import { generateCareerStatements } from '../../../services/careerDocService';
 import { generateCoverLetter } from '../../../services/careerDocService';
 import { generateNarrativeSections } from '../../../services/geminiService';
 import { analyzeAtsScore } from '../../../services/atsService';
-import { generateInterviewQuestions } from '../../../services/interviewService';
-import { generatePractitionerReview } from '../../../services/practitionerService';
+import { generateInterviewQuestions } from '../../interview/service';
+import { generatePractitionerReview } from '../../practitioner/service';
 import { generateLinkedInOptimization } from '../../../services/skillGapService';
 
 // ─────────────────────────────────────────────────────────────

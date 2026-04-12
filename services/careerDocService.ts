@@ -11,9 +11,10 @@ import {
   AboutStatementVersion,
   CompanyContext,
 } from "../types";
-import { formatCompanyContext } from './companyResearchService';
+import { formatCompanyContext } from '../core/research/companyResearch';
 import { formatRepoInfo } from "./geminiService";
 import { getAI } from "./promptCache";
+import { MODELS } from "../shared/api/geminiClient";
 import {
   SECURITY_RULE,
   GROUNDING_FULL,
@@ -116,7 +117,7 @@ ${QUANTIFICATION_CAREER}
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODELS.pro,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
@@ -346,7 +347,7 @@ Format in Markdown with natural paragraph flow.`;
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODELS.pro,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
@@ -491,7 +492,7 @@ ${resumeText.slice(0, 2000)}
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODELS.pro,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),

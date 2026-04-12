@@ -1,6 +1,7 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import { InterviewQuestion, InterviewFeedback, TailoredInstructionWithRequirements, CompanyContext } from "../../types";
 import { getAI } from "../../services/promptCache";
+import { MODELS } from "../../shared/api/geminiClient";
 import {
   SECURITY_RULE,
   GROUNDING_BASIC,
@@ -8,7 +9,7 @@ import {
   HR_PERSPECTIVE_INTERVIEW,
   formatInstruction,
 } from "../../services/promptBlocks";
-import { formatCompanyContext } from '../../services/companyResearchService';
+import { formatCompanyContext } from '../../core/research/companyResearch';
 import { withRetry } from '../../services/retry';
 import { validateResumeInput, validateJDInput, safeParseJSON } from '../../services/validation';
 import { classifyError } from '../../services/errors';
@@ -88,7 +89,7 @@ BAD 인성 질문: "팀워크에 대해 어떻게 생각하시나요?" (이력�
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODELS.pro,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n'),
@@ -214,7 +215,7 @@ ${jobDescription}
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: MODELS.flash,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n'),

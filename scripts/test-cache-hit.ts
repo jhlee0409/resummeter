@@ -5,7 +5,7 @@ const apiKey = envContent.match(/GEMINI_API_KEY=(.+)/)?.[1]?.trim();
 process.env.GEMINI_API_KEY = apiKey;
 process.env.API_KEY = apiKey;
 
-const { researchCompany, researchJobRole } = await import('../services/companyResearchService');
+const { researchCompany, researchJobRole } = await import('../core/research/companyResearch');
 
 // 1차: API 호출
 const t1 = Date.now();

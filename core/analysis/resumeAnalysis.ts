@@ -1,6 +1,6 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import { TailoredInstructionWithRequirements, GithubRepo, GitHubFetchResult, JdRequirement, CompanyContext } from "../../types";
-import { getAI, type SessionCache } from "../../shared/api/geminiClient";
+import { getAI, MODELS, getCacheFields, type SessionCache } from "../../shared/api/geminiClient";
 import { withRetry } from "../../shared/api/retry";
 import { validateResumeInput, validateJDInput, safeParseJSON, validateOutput, AnalysisOutputSchema } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
@@ -63,7 +63,7 @@ export async function analyzeResume(
 
   const repoInfo = formatRepoInfo(githubRepos, githubData);
   const today = new Date().toISOString().split('T')[0];
-  const { buildIndustryContext } = await import('../../services/industryDetect');
+  const { buildIndustryContext } = await import('../research/industryDetect');
   const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
@@ -121,12 +121,9 @@ ${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}${HR_PER
 - weak는 "관련 경험이 있지만 구체적 증거/수치가 부족한 경우"에만 사용하십시오.`;
 
   try {
-    // Context Cache: 있으면 systemInstruction 대신 cachedContent 사용
-    const cacheFields = sessionCache?.cacheName
-      ? { cachedContent: sessionCache.cacheName }
-      : { systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n') };
+    const cacheFields = getCacheFields(sessionCache, [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY]);
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: MODELS.pro,
       contents: prompt,
       config: {
         ...cacheFields,

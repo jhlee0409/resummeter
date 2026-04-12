@@ -1,10 +1,11 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import { getAI } from '../../services/promptCache';
+import { MODELS } from '../../shared/api/geminiClient';
 import type { TailoredInstructionWithRequirements, Industry } from '../../types';
 import { withRetry } from '../../services/retry';
 import { validateResumeInput, safeParseJSON } from '../../services/validation';
 import { classifyError } from '../../services/errors';
-import { INDUSTRY_PROFILES } from '../../services/industryDetect';
+import { INDUSTRY_PROFILES } from '../../core/research/industryDetect';
 import { SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY } from '../../services/promptBlocks';
 
 export interface PractitionerReview {
@@ -122,7 +123,7 @@ JSON 스키마에 맞춰 반환하세요.
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: MODELS.flash,
       contents: prompt,
       config: {
         systemInstruction,

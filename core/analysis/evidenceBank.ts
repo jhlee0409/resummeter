@@ -1,6 +1,6 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import { TailoredInstructionWithRequirements, GitHubFetchResult, EvidenceBank } from "../../types";
-import { getAI } from "../../shared/api/geminiClient";
+import { getAI, MODELS } from "../../shared/api/geminiClient";
 import { withRetry } from "../../shared/api/retry";
 import { safeParseJSON } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
@@ -58,7 +58,7 @@ ${githubDataFormatted}
 
   try {
     const response = await withRetry(() => getAI().models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: MODELS.flash,
       contents: prompt,
       config: {
         systemInstruction: [SECURITY_RULE, GROUNDING_FULL].join('\n\n'),

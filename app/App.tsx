@@ -2,14 +2,14 @@ import React, { useState, useCallback } from 'react';
 import { Toaster } from 'sonner';
 import { Stepper } from '../shared/ui/Stepper';
 import { UploadStep } from '../components/UploadStep';
-import { AnalysisStep } from '../components/AnalysisStep';
+import { AnalysisStep } from '../features/analysis/AnalysisStep';
 import { ReviewStep } from '../components/ReviewStep';
 import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from '../types';
 import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from '../services/geminiService';
 import { track } from '../services/analytics';
-import { getCachedAnalysis, setCachedAnalysis, clearAnalysisCache } from '../services/analysisCache';
-import { calculateScore } from '../services/scoringEngine';
-import { researchCompany, researchJobRole, mergeResearchResults } from '../services/companyResearchService';
+import { getCachedAnalysis, setCachedAnalysis } from '../features/review/services/analysisCache';
+import { calculateScore } from '../core/scoring/scoringEngine';
+import { researchCompany, researchJobRole, mergeResearchResults } from '../core/research/companyResearch';
 import { getOrCreateSessionCache, invalidateCache, type SessionCache } from '../services/promptCache';
 import { toast } from 'sonner';
 import { useFeatureStore } from '../stores/featureStore';
@@ -91,45 +91,32 @@ const App: React.FC = () => {
       // Context Caching: 공통 컨텍스트를 Gemini 서버에 캐싱
       const sessionCache = await getOrCreateSessionCache('pro', userData.resumeText, userData.jobDescription, instruction).catch(() => null);
 
-      // Stage 2a+2b: 분석 → 코칭 생성 (내부에서 stage 전환)
-      const coachingResult = await coachResume(
-        userData.resumeText,
-        userData.jobDescription,
-        instruction,
-        userData.githubRepos,
-        githubData,
-        (stage) => setAnalysisStage(stage),
-        companyContext,
-        sessionCache,
-      );
-
-      // Stage 3: Evidence Bank (optional)
-      let finalResult = coachingResult;
+      // Stage 2 (coaching) + Stage 3 (evidence bank) 병렬 실행
+      // evidenceBank는 instruction + githubData만 필요 → coaching과 독립적
       const successfulFetches = githubData?.filter(d => d.status === 'success') ?? [];
-      if (successfulFetches.length > 0) {
-        setAnalysisStage('evidence-matching');
-        try {
-          const evidenceBank = await enrichEvidenceBank(instruction, githubData!);
-          const emptyBank = evidenceBank.repos.length === 0 && evidenceBank.highlights.length === 0;
-          finalResult = { ...coachingResult, evidenceBank: emptyBank ? undefined : evidenceBank };
-        } catch (e) {
-          console.warn("Evidence matching failed, continuing without:", e);
-        }
-      }
+      const [coachingResult, evidenceBank] = await Promise.all([
+        coachResume(userData.resumeText, userData.jobDescription, instruction, userData.githubRepos, githubData, (stage) => setAnalysisStage(stage), companyContext, sessionCache),
+        successfulFetches.length > 0
+          ? enrichEvidenceBank(instruction, githubData!).catch(e => { console.warn("Evidence matching failed:", e); return null; })
+          : Promise.resolve(null),
+      ]);
 
-      // Scoring Engine: LLM 점수 대신 규칙 기반 점수로 대체
+      const emptyBank = !evidenceBank || (evidenceBank.repos.length === 0 && evidenceBank.highlights.length === 0);
+      const finalResult = emptyBank ? coachingResult : { ...coachingResult, evidenceBank: evidenceBank! };
+
       const scoring = calculateScore(finalResult.gapMap, instruction, userData.resumeText, userData.jobDescription, companyContext);
       const scoredResult = { ...finalResult, matchScore: scoring.matchScore, scoringResult: scoring };
 
       setResult(scoredResult);
-      // Cache: 분석 결과 저장
-      setCachedAnalysis(userData.resumeText, userData.jobDescription, instruction, scoredResult, userData.companyContext ?? null);
+      // stale state 방지: userData.companyContext 대신 로컬 companyContext 사용
+      setCachedAnalysis(userData.resumeText, userData.jobDescription, instruction, scoredResult, companyContext);
       track({ type: 'analysis_complete', matchScore: scoring.matchScore, durationMs: Date.now() - analysisStartTime });
       setCurrentStep(AppStep.REVIEW);
       // Context Cache 정리 (TTL 30분이지만 세션 종료 시 즉시 삭제)
       invalidateCache().catch(() => {});
     } catch (error) {
       console.error(error);
+      invalidateCache().catch(() => {});
       alert("AI 분석 중 오류가 발생했습니다. API 키와 입력값을 확인해주세요.");
       setCurrentStep(AppStep.UPLOAD);
     }
@@ -138,6 +125,7 @@ const App: React.FC = () => {
   const handleRestart = () => {
     track({ type: 'restart' });
     useFeatureStore.getState().resetAll();
+    invalidateCache().catch(() => {});
     setResult(null);
     setAnalysisStage('jd-analysis');
     setUserData({ resumeText: '', jobDescription: '', companyName: '', jobTitle: '', githubRepos: [{ url: '', description: '' }], githubData: undefined });

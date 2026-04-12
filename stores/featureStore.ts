@@ -20,13 +20,13 @@ import type {
   CompanyContext,
   GapMapItem,
 } from '../types';
-import type { PractitionerReview } from '../services/practitionerService';
+import type { PractitionerReview } from '../features/practitioner/service';
 
 import { generateCareerStatements, generateCoverLetter, refineAboutStatement } from '../services/careerDocService';
-import { generateInterviewQuestions, evaluateAnswer } from '../services/interviewService';
+import { generateInterviewQuestions, evaluateAnswer } from '../features/interview/service';
 import { analyzeLearningRoadmap, generateLinkedInOptimization } from '../services/skillGapService';
-import { analyzeGap } from '../services/gapAnalysisService';
-import { generatePractitionerReview } from '../services/practitionerService';
+import { analyzeGap } from '../features/gap-analysis/service';
+import { generatePractitionerReview } from '../features/practitioner/service';
 
 // ─── Slice 타입 ───
 
