@@ -111,12 +111,12 @@ ${JSON.stringify(analysis.gapMap, null, 2)}
 ${JSON.stringify(analysis.analysisItems, null, 2)}
 - quickWins: ${JSON.stringify(analysis.quickWins)}
 
-[이력서 원문 (before 검증용)]
+${sessionCache?.cacheName ? '' : `[이력서 원문 (before 검증용)]
 <user-resume>
 ${resumeText}
 </user-resume>
 
-${repoInfo ? `[GitHub 리포지토리 (evidence 작성용)]\n${repoInfo}\n` : ''}[생성 태스크]
+${repoInfo ? `[GitHub 리포지토리 (evidence 작성용)]\n${repoInfo}\n` : ''}`}[생성 태스크]
 각 analysisItem에 대해:
 1. before: 분석 결과의 before를 그대로 복사하십시오.
 2. **suggestion (필수)**: analysisItem의 issue + direction을 조합하여 2-3문장 코칭 지시("~하세요" 형태)로 작성하십시오. 이 필드를 빠뜨리지 마십시오.

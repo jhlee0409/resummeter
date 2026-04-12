@@ -67,6 +67,27 @@ export async function analyzeResume(
   const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
+  // 캐시 히트 시 context(이력서/JD/instruction/repos)는 캐시에서 로드됨 → prompt에서 제외
+  const cached = !!sessionCache?.cacheName;
+  const contextBlock = cached ? '' : `
+${formatInstruction(instruction)}
+- 요구사항:
+${instruction.jdRequirements.map((r: JdRequirement, i: number) =>
+  `  ${i+1}. [${r.importance}] [${r.category}] ${r.text} (키워드: ${r.keywords.join(', ')})`
+).join('\n')}
+
+[이력서 원문]
+<user-resume>
+${resumeText}
+</user-resume>
+
+[채용 공고 원문]
+<user-jd>
+${jobDescription}
+</user-jd>
+
+${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}`;
+
   const prompt = `[역할]
 당신은 이력서 분석 전문가입니다.
 ${industryContext}
@@ -84,24 +105,8 @@ JD가 50자 미만이면: "채용 공고 내용이 부족합니다. 자격요건
 원칙 1: 이력서 원문에 명시된 내용만 분석 대상입니다.
 원칙 2: 이력서에 없는 기술/경험/성과는 존재하지 않는 것으로 취급합니다.
 원칙 3: before 필드는 이력서에서 복사-붙여넣기한 원문이어야 합니다.
-
-${formatInstruction(instruction)}
-- 요구사항:
-${instruction.jdRequirements.map((r: JdRequirement, i: number) =>
-  `  ${i+1}. [${r.importance}] [${r.category}] ${r.text} (키워드: ${r.keywords.join(', ')})`
-).join('\n')}
-
-[이력서 원문]
-<user-resume>
-${resumeText}
-</user-resume>
-
-[채용 공고 원문]
-<user-jd>
-${jobDescription}
-</user-jd>
-
-${repoInfo ? `[GitHub 리포지토리 (참고용)]\n${repoInfo}\n` : ''}${HR_PERSPECTIVE_ANALYSIS}
+${contextBlock}
+${HR_PERSPECTIVE_ANALYSIS}
 
 [분석 태스크]
 각 JD 요구사항에 대해:
