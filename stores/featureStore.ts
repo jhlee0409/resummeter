@@ -22,9 +22,12 @@ import type {
 } from '../types';
 import type { PractitionerReview } from '../features/practitioner/service';
 
-import { generateCareerStatements, generateCoverLetter, refineAboutStatement } from '../services/careerDocService';
+import { generateCareerStatements } from '../features/career-statement/service';
+import { generateCoverLetter } from '../features/cover-letter/service';
+import { refineAboutStatement } from '../features/about-statement/service';
 import { generateInterviewQuestions, evaluateAnswer } from '../features/interview/service';
-import { analyzeLearningRoadmap, generateLinkedInOptimization } from '../services/skillGapService';
+import { analyzeLearningRoadmap } from '../features/skill-gap/service';
+import { generateLinkedInOptimization } from '../features/linkedin/service';
 import { analyzeGap } from '../features/gap-analysis/service';
 import { generatePractitionerReview } from '../features/practitioner/service';
 

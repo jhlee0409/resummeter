@@ -113,7 +113,16 @@ const App: React.FC = () => {
       // evidenceBank는 instruction + githubData만 필요 → coaching과 독립적
       const successfulFetches = githubData?.filter(d => d.status === 'success') ?? [];
       const [coachingResult, evidenceBank] = await Promise.all([
-        coachResume(userData.resumeText, userData.jobDescription, instruction, userData.githubRepos, githubData, (stage) => setAnalysisStage(stage), companyContext, sessionCache),
+        coachResume({
+          resumeText: userData.resumeText,
+          jobDescription: userData.jobDescription,
+          instruction,
+          githubRepos: userData.githubRepos,
+          githubData,
+          onStageChange: (stage) => setAnalysisStage(stage),
+          companyContext,
+          sessionCache,
+        }),
         successfulFetches.length > 0
           ? enrichEvidenceBank(instruction, githubData!).catch(e => { console.warn("Evidence matching failed:", e); return null; })
           : Promise.resolve(null),

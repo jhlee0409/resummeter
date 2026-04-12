@@ -26,7 +26,15 @@ const companyInfo = await cached('company', [company], () => researchCompany(com
 const jobRoleInfo = await cached('role', [jobTitle, company], () => researchJobRole(jobTitle, company)).catch(() => null);
 const ctx = mergeResearchResults(companyInfo, jobRoleInfo);
 const coach = await cached('coaching', [resumeText.slice(0, 200), jdText.slice(0, 200), company, jobTitle], () =>
-  coachResume(resumeText, jdText, instruction, [{ url: '', description: '' }], undefined, () => {}, ctx)
+  coachResume({
+    resumeText,
+    jobDescription: jdText,
+    instruction,
+    githubRepos: [{ url: '', description: '' }],
+    githubData: undefined,
+    onStageChange: () => {},
+    companyContext: ctx,
+  })
 );
 
 // 테스트 케이스 정의

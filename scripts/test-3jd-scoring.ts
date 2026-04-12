@@ -35,7 +35,14 @@ for (const c of cases) {
 
   process.stdout.write('  분석 중...');
   const instruction = await generateTailoredInstruction(jdText);
-  const coach = await coachResume(resumeText, jdText, instruction, [{ url: '', description: '' }], undefined, () => {});
+  const coach = await coachResume({
+    resumeText,
+    jobDescription: jdText,
+    instruction,
+    githubRepos: [{ url: '', description: '' }],
+    githubData: undefined,
+    onStageChange: () => {},
+  });
   console.log(' OK');
 
   // keywordAliases 확인

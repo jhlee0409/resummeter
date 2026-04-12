@@ -15,10 +15,13 @@ process.env.API_KEY = apiKey;
 const { generateTailoredInstruction, coachResume, generateNarrativeSections } = await import('../services/geminiService');
 const { researchCompany, researchJobRole, mergeResearchResults } = await import('../core/research/companyResearch');
 const { calculateScore, LEVEL_LABELS } = await import('../core/scoring/scoringEngine');
-const { analyzeAtsScore, analyzeDetailedScore } = await import('../services/atsService');
-const { generateCareerStatements, generateCoverLetter, refineAboutStatement } = await import('../services/careerDocService');
+const { analyzeAtsScore, analyzeDetailedScore } = await import('../features/ats-score/service');
+const { generateCareerStatements } = await import('../features/career-statement/service');
+const { generateCoverLetter } = await import('../features/cover-letter/service');
+const { refineAboutStatement } = await import('../features/about-statement/service');
 const { generateInterviewQuestions, evaluateAnswer } = await import('../features/interview/service');
-const { analyzeLearningRoadmap, generateLinkedInOptimization } = await import('../services/skillGapService');
+const { analyzeLearningRoadmap } = await import('../features/skill-gap/service');
+const { generateLinkedInOptimization } = await import('../features/linkedin/service');
 const { analyzeGap } = await import('../features/gap-analysis/service');
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');
@@ -53,7 +56,15 @@ const ctx = mergeResearchResults(companyInfo, jobRoleInfo);
 // ── 2. Stage 2: 이력서 분석 + 코칭 ──
 console.log('\n── Stage 2: 이력서 분석 + 코칭 ──');
 const coach = await cached('coaching', [resumeText.slice(0, 200), jdText.slice(0, 200), company, jobTitle], () =>
-  coachResume(resumeText, jdText, instruction, [{ url: '', description: '' }], undefined, () => {}, ctx)
+  coachResume({
+    resumeText,
+    jobDescription: jdText,
+    instruction,
+    githubRepos: [{ url: '', description: '' }],
+    githubData: undefined,
+    onStageChange: () => {},
+    companyContext: ctx,
+  })
 );
 check('gapMap', coach.gapMap.length >= 3, `${coach.gapMap.length}개 항목`);
 check('actionItems', (coach.actionItems?.length ?? 0) >= 1, `${coach.actionItems?.length ?? 0}개`);

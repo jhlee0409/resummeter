@@ -12,10 +12,11 @@ import * as Diff from 'diff';
 import { marked } from 'marked';
 import { PipelinePanel } from './PipelinePanel';
 import type { PipelineResults } from '../features/review/services/pipelineService';
-import { analyzeAtsScore, analyzeDetailedScore } from '../services/atsService';
+import { analyzeAtsScore, analyzeDetailedScore } from '../features/ats-score/service';
 import { track } from '../services/analytics';
 import { toast } from 'sonner';
 import type { AtsScore, DetailedScore } from '../types';
+import { ErrorBoundary } from '../shared/ui/ErrorBoundary';
 
 // Lazy-loaded tab components
 const EvidenceBankView = lazy(() => import('./EvidenceBankView').then(m => ({ default: m.EvidenceBankView })));
@@ -400,14 +401,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
           {/* Gap Analysis Tab */}
           {activeTab === 'gap-analysis' && (
-            <Suspense fallback={<TabLoading />}>
-              <GapAnalysisView
-                resumeText={originalData.resumeText}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-                companyContext={originalData.companyContext}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <GapAnalysisView
+                  resumeText={originalData.resumeText}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                  companyContext={originalData.companyContext}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Actions Tab */}
@@ -472,9 +475,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
           {/* Evidence Tab */}
           {activeTab === 'evidence' && (
-            <Suspense fallback={<TabLoading />}>
-              <EvidenceBankView evidenceBank={result.evidenceBank} />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <EvidenceBankView evidenceBank={result.evidenceBank} />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Narrative Tab */}
@@ -509,144 +514,166 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
           {/* ATS Score Tab */}
           {activeTab === 'ats-score' && (
-            <Suspense fallback={<TabLoading />}>
-              {atsScore ? (
-                <AtsScoreView atsScore={atsScore} />
-              ) : (
-                <div className="text-center py-12">
-                  <button
-                    onClick={handleAnalyzeAts}
-                    disabled={isLoadingAts}
-                    className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                  >
-                    {isLoadingAts ? '분석 중...' : 'ATS 점수 분석'}
-                  </button>
-                </div>
-              )}
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                {atsScore ? (
+                  <AtsScoreView atsScore={atsScore} />
+                ) : (
+                  <div className="text-center py-12">
+                    <button
+                      onClick={handleAnalyzeAts}
+                      disabled={isLoadingAts}
+                      className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                    >
+                      {isLoadingAts ? '분석 중...' : 'ATS 점수 분석'}
+                    </button>
+                  </div>
+                )}
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Detailed Score Tab */}
           {activeTab === 'detailed-score' && (
-            <Suspense fallback={<TabLoading />}>
-              {detailedScore ? (
-                <DetailedScoreView detailedScore={detailedScore} />
-              ) : (
-                <div className="text-center py-12">
-                  <button
-                    onClick={handleAnalyzeDetailed}
-                    disabled={isLoadingDetailed}
-                    className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
-                  >
-                    {isLoadingDetailed ? '분석 중...' : '상세 점수 분석'}
-                  </button>
-                </div>
-              )}
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                {detailedScore ? (
+                  <DetailedScoreView detailedScore={detailedScore} />
+                ) : (
+                  <div className="text-center py-12">
+                    <button
+                      onClick={handleAnalyzeDetailed}
+                      disabled={isLoadingDetailed}
+                      className="px-6 py-3 bg-gradient-to-r from-brand-500 to-brand-600 text-white rounded-lg font-semibold hover:from-brand-600 hover:to-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg"
+                    >
+                      {isLoadingDetailed ? '분석 중...' : '상세 점수 분석'}
+                    </button>
+                  </div>
+                )}
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Career Statement Tab */}
           {activeTab === 'career-statement' && (
-            <Suspense fallback={<TabLoading />}>
-              <CareerStatementView
-                resumeText={originalData.resumeText}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-                githubData={originalData.githubData}
-                companyContext={originalData.companyContext}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <CareerStatementView
+                  resumeText={originalData.resumeText}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                  githubData={originalData.githubData}
+                  companyContext={originalData.companyContext}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Cover Letter Tab */}
           {activeTab === 'cover-letter' && (
-            <Suspense fallback={<TabLoading />}>
-              <CoverLetterView
-                resumeText={originalData.resumeText}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-                coachingResult={result}
-                companyContext={originalData.companyContext}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <CoverLetterView
+                  resumeText={originalData.resumeText}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                  coachingResult={result}
+                  companyContext={originalData.companyContext}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Interview Tab */}
           {activeTab === 'interview' && (
-            <Suspense fallback={<TabLoading />}>
-              <MockInterviewView
-                resumeText={originalData.resumeText}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-                companyContext={originalData.companyContext}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <MockInterviewView
+                  resumeText={originalData.resumeText}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                  companyContext={originalData.companyContext}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Skill Gap Tab */}
           {activeTab === 'skill-gap' && (
-            <Suspense fallback={<TabLoading />}>
-              <SkillGapView
-                gapMap={result.gapMap}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-                companyContext={originalData.companyContext}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <SkillGapView
+                  gapMap={result.gapMap}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                  companyContext={originalData.companyContext}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* LinkedIn Tab */}
           {activeTab === 'linkedin' && (
-            <Suspense fallback={<TabLoading />}>
-              <LinkedInOptView
-                resumeText={originalData.resumeText}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-                companyContext={originalData.companyContext}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <LinkedInOptView
+                  resumeText={originalData.resumeText}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                  companyContext={originalData.companyContext}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Examples Tab */}
           {activeTab === 'examples' && (
-            <Suspense fallback={<TabLoading />}>
-              <ExampleBrowserView />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <ExampleBrowserView />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Versions Tab */}
           {activeTab === 'versions' && (
-            <Suspense fallback={<TabLoading />}>
-              <VersionManagerView
-                currentResumeText={editedResume}
-                currentJobDescription={originalData.jobDescription}
-                currentScore={result.matchScore}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <VersionManagerView
+                  currentResumeText={editedResume}
+                  currentJobDescription={originalData.jobDescription}
+                  currentScore={result.matchScore}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Practitioner Simulation Tab */}
           {activeTab === 'practitioner' && (
-            <Suspense fallback={<TabLoading />}>
-              <PractitionerSimView
-                resumeText={originalData.resumeText}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <PractitionerSimView
+                  resumeText={originalData.resumeText}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* About Statement Tab */}
           {activeTab === 'about-statement' && (
-            <Suspense fallback={<TabLoading />}>
-              <AboutStatementView
-                resumeText={originalData.resumeText}
-                jobDescription={originalData.jobDescription}
-                instruction={instruction}
-                coachingResult={result}
-                companyContext={originalData.companyContext}
-              />
-            </Suspense>
+            <ErrorBoundary>
+              <Suspense fallback={<TabLoading />}>
+                <AboutStatementView
+                  resumeText={originalData.resumeText}
+                  jobDescription={originalData.jobDescription}
+                  instruction={instruction}
+                  coachingResult={result}
+                  companyContext={originalData.companyContext}
+                />
+              </Suspense>
+            </ErrorBoundary>
           )}
 
           {/* Resume Tab */}

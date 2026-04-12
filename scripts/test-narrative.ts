@@ -40,11 +40,14 @@ console.log(`  완료 (${companyCtx?.companyName}, 신뢰도 ${Math.round((compa
 
 // Step 3: 코칭 (서술형 생성에 필요)
 console.log('\n🎯 코칭 분석 중...');
-const coachResult = await coachResume(
-  resumeText, jdText, instruction,
-  [{ url: '', description: '' }], undefined,
-  (stage) => process.stdout.write(`  ${stage}...`)
-);
+const coachResult = await coachResume({
+  resumeText,
+  jobDescription: jdText,
+  instruction,
+  githubRepos: [{ url: '', description: '' }],
+  githubData: undefined,
+  onStageChange: (stage) => process.stdout.write(`  ${stage}...`),
+});
 console.log('\n  완료');
 
 // Step 4: 서술형 생성 — 채널톡 필수 질문 2개

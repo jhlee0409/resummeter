@@ -9,7 +9,7 @@ import { MODELS } from '../../shared/api/geminiClient';
 import { withRetry } from '../../services/retry';
 import { validateResumeInput, validateJDInput, safeParseJSON } from '../../services/validation';
 import { classifyError } from '../../services/errors';
-import { SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS } from '../../services/promptBlocks';
+import { GROUNDING_FULL, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS, buildSystemPrompt } from '../../services/promptBlocks';
 import { formatCompanyContext } from '../../core/research/companyResearch';
 import type { CompanyContext, GapAnalysisResult, GapMatch, TailoredInstructionWithRequirements } from '../../types';
 
@@ -99,7 +99,7 @@ BAD (피하세요):
       model: MODELS.pro,
       contents: prompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS].join('\n\n'),
+        systemInstruction: buildSystemPrompt({ grounding: GROUNDING_FULL, aiDetection: AI_DETECTION_KO_BASE, hrPerspective: HR_PERSPECTIVE_ANALYSIS }),
         temperature: 0.2,
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: 'application/json',

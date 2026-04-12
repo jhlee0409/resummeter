@@ -396,16 +396,20 @@ function backfillRelatedActions(
 // coachResume Wrapper: Stage 2a → Stage 2b → Backfill
 // ─────────────────────────────────────────────────────────────
 
-export const coachResume = async (
-  resumeText: string,
-  jobDescription: string,
-  instruction: TailoredInstructionWithRequirements,
-  githubRepos: GithubRepo[],
-  githubData?: GitHubFetchResult[],
-  onStageChange?: (stage: 'resume-analysis' | 'coaching') => void,
-  companyContext?: CompanyContext | null,
-  sessionCache?: SessionCache | null,
-): Promise<CoachingResult> => {
+export interface CoachResumeOptions {
+  resumeText: string;
+  jobDescription: string;
+  instruction: TailoredInstructionWithRequirements;
+  githubRepos: GithubRepo[];
+  githubData?: GitHubFetchResult[];
+  onStageChange?: (stage: 'resume-analysis' | 'coaching') => void;
+  companyContext?: CompanyContext | null;
+  sessionCache?: SessionCache | null;
+}
+
+export const coachResume = async (opts: CoachResumeOptions): Promise<CoachingResult> => {
+  const { resumeText, jobDescription, instruction, githubRepos, githubData, onStageChange, companyContext, sessionCache } = opts;
+
   // Stage 2a: 분석
   onStageChange?.('resume-analysis');
   const analysis = await analyzeResume(resumeText, jobDescription, instruction, githubRepos, githubData, companyContext, sessionCache);

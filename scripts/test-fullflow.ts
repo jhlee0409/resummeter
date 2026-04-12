@@ -69,11 +69,14 @@ try {
 // Step 3: 코칭 분석
 console.log('\n🎯 Step 3: 코칭 분석 중...');
 const startCoach = Date.now();
-const coachResult = await coachResume(
-  resumeText, jdText, instruction,
-  [{ url: '', description: '' }], undefined,
-  (stage) => console.log(`    stage: ${stage}`)
-);
+const coachResult = await coachResume({
+  resumeText,
+  jobDescription: jdText,
+  instruction,
+  githubRepos: [{ url: '', description: '' }],
+  githubData: undefined,
+  onStageChange: (stage) => console.log(`    stage: ${stage}`),
+});
 console.log(`  완료 (${Date.now() - startCoach}ms)`);
 console.log(`  매칭 점수: ${coachResult.matchScore}/100`);
 console.log(`  요약: ${coachResult.summary}`);

@@ -1,18 +1,17 @@
 import { Type, ThinkingLevel } from "@google/genai";
-import type { AtsScore, DetailedScore, CompanyContext } from "../types";
-import { formatCompanyContext } from '../core/research/companyResearch';
-import { getAI } from "./promptCache";
-import { MODELS } from "../shared/api/geminiClient";
+import type { AtsScore, DetailedScore, CompanyContext } from "../../types";
+import { formatCompanyContext } from '../../core/research/companyResearch';
+import { getAI, MODELS } from "../../shared/api/geminiClient";
 import {
   SECURITY_RULE,
   GROUNDING_BASIC,
   RESUME_HIERARCHY,
   HR_PERSPECTIVE_ATS,
   QUANTIFICATION_ATS,
-} from "./promptBlocks";
-import { withRetry } from './retry';
-import { validateResumeInput, validateJDInput, safeParseJSON } from './validation';
-import { classifyError } from './errors';
+} from "../../shared/prompt/promptBlocks";
+import { withRetry } from '../../shared/api/retry';
+import { validateResumeInput, validateJDInput, safeParseJSON } from '../../shared/lib/validation';
+import { classifyError } from '../../shared/lib/errors';
 
 /**
  * ATS 점수 분석: 키워드 매칭, 포맷 호환성, 약어/풀네임 병기 제안, 키워드 스터핑 감지

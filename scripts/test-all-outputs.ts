@@ -15,8 +15,9 @@ process.env.API_KEY = apiKey;
 const { generateTailoredInstruction, coachResume } = await import('../services/geminiService');
 const { researchCompany, researchJobRole, mergeResearchResults } = await import('../core/research/companyResearch');
 const { analyzeGap } = await import('../features/gap-analysis/service');
-const { analyzeAtsScore, analyzeDetailedScore } = await import('../services/atsService');
-const { generateCareerStatements, generateCoverLetter } = await import('../services/careerDocService');
+const { analyzeAtsScore, analyzeDetailedScore } = await import('../features/ats-score/service');
+const { generateCareerStatements } = await import('../features/career-statement/service');
+const { generateCoverLetter } = await import('../features/cover-letter/service');
 const { generateInterviewQuestions } = await import('../features/interview/service');
 const { generatePractitionerReview } = await import('../features/practitioner/service');
 
@@ -74,7 +75,14 @@ log('회사 리서치', {
 // 3. 코칭
 console.log('🎯 3/8 코칭 분석...');
 time('coach');
-const result = await coachResume(resumeText, jdText, instruction, [{ url: '', description: '' }], undefined, () => {});
+const result = await coachResume({
+  resumeText,
+  jobDescription: jdText,
+  instruction,
+  githubRepos: [{ url: '', description: '' }],
+  githubData: undefined,
+  onStageChange: () => {},
+});
 timeEnd('coach');
 log('코칭', {
   점수: result.matchScore,

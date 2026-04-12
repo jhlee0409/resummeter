@@ -23,11 +23,9 @@ import { withRetry } from "../../shared/api/retry";
 import { safeParseJSON } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
 import {
-  SECURITY_RULE,
   GROUNDING_FULL,
-  RESUME_HIERARCHY,
-  QUANTIFICATION_NARRATIVE,
   formatInstruction,
+  buildSystemPrompt,
 } from "../../shared/prompt/promptBlocks";
 import { formatRepoInfo, formatCompanyContext } from "../../shared/prompt/formatters";
 
@@ -107,151 +105,6 @@ const TECH_NARRATIVE_RESPONSE_SCHEMA = {
   },
   required: ["title", "content", "charCount", "keywordsUsed", "githubEvidences"],
 };
-
-// ─────────────────────────────────────────────────────────────
-// buildNarrativePrompt — 기정의 타입(self-introduction 등) 전용. custom 타입은 2단계 파이프라인 사용.
-// ─────────────────────────────────────────────────────────────
-
-function buildNarrativePrompt(
-  spec: NarrativeSectionSpec,
-  instruction: TailoredInstructionWithRequirements,
-  resumeText: string,
-  jobDescription: string,
-  githubRepos: GithubRepo[],
-  githubData?: GitHubFetchResult[],
-  coachingResult?: CoachingResult,
-): string {
-  const repoInfo = formatRepoInfo(githubRepos, githubData);
-  const today = new Date().toISOString().split('T')[0];
-  const sectionLabel = spec.type === 'custom' ? (spec.customTitle || '사용자 정의') : SECTION_TYPE_LABELS[spec.type];
-
-  const frameworkInstruction = spec.framework === 'k-star-k'
-    ? `이 섹션은 K-STAR-K 프레임워크를 따릅니다. 한국 대기업 자기소개서의 표준 구조입니다.
-
-구조:
-1. K (결론): 질문에 대한 핵심 답변을 두괄식으로 제시하십시오.
-   [첫 문장 작성 규칙 — HR 평가 기준 반영]
-   - 구체적 경험/성과가 포함된 요약이어야 합니다. 추상적 선언 금지.
-   - GOOD: "기획 부재 상황에서 Canvas 기반 웹 에디터를 설계하여 B2B 계약 2건을 성사시킨 경험이 있습니다"
-   - BAD: "불확실성을 기술적 확신으로 바꾸는 추진력이 저의 강점입니다" (추상적, 근거 없음)
-   - BAD: "~에 기여하겠습니다" (미래 약속형 시작 금지 — 질문이 기여만을 물을 때도 경험 요약이 먼저)
-   - BAD: "저는 ~입니다" (1인칭 주어 시작 자제. 매끄럽지 않고 과한 자기 강조)
-   - 첫 문장에 "무엇을 했고 어떤 결과를 냈는지"가 담겨야 면접관이 7초 안에 파악 가능
-2. S (Situation): 구체적인 상황/배경을 설명하십시오.
-3. T (Task): 본인이 맡은 과제/목표를 명시하십시오.
-4. A (Action): 수행한 구체적 행동을 서술하십시오. 기술적 역량을 집중적으로 드러내십시오.
-5. R (Result): 정량적 성과와 결과를 제시하십시오.
-6. K (가능성): 이 경험에서 얻은 교훈이나 성장을 요약하십시오.
-   - 질문이 "기여"나 "포부"를 물을 때만 지원 직무와 연결하십시오.
-   - 그 외에는 경험에서 체득한 원칙, 성장한 점, 또는 앞으로의 방향성으로 마무리하십시오.
-   - "~하겠습니다"식 회사 어필로 끝내는 것을 기본값으로 삼지 마십시오.
-
-글자 수 배분 가이드:
-- K(결론): 전체의 10-15%
-- S(상황): 전체의 10-15%
-- T(과제): 전체의 10-15%
-- A(행동): 전체의 25-35%
-- R(결과): 전체의 15-20%
-- K(가능성): 전체의 10-15%`
-    : `이 섹션은 Tech Narrative (기술 문제해결 서사) 구조를 따릅니다. IT 스타트업에서 선호하는 실무 중심 구조입니다.
-
-구조:
-1. 문제 정의: 해결해야 했던 기술적 문제를 명확히 정의하십시오.
-2. 기술적 접근: 문제를 분석하고 선택한 기술적 접근 방법과 그 이유를 설명하십시오.
-3. 구현: 실제 구현 과정에서의 핵심 기술 결정과 트레이드오프를 서술하십시오.
-4. 임팩트: 수치로 표현 가능한 성과를 제시하십시오 (예: "API 응답 시간 8초 → 4초로 단축", "배포 시간 30분 → 5분").
-
-글자 수 배분 가이드:
-- 문제 정의: 전체의 20-25%
-- 기술적 접근: 전체의 25-30%
-- 구현: 전체의 25-30%
-- 임팩트: 전체의 15-25%`;
-
-  const hasRepos = repoInfo.length > 0;
-  const sectionTypeInstruction: Record<string, string> = {
-    'self-introduction': hasRepos
-      ? '개발 철학과 커리어 서사를 중심으로, GitHub 활동을 통해 증명된 핵심 가치와 JD 요구사항의 연결점을 자연스럽게 풀어내십시오.'
-      : '개발 철학과 커리어 서사를 중심으로, 이력서에 기술된 경험과 JD 요구사항의 연결점을 자연스럽게 풀어내십시오.',
-    'career-project': '가장 성과가 좋았던 프로젝트를 중심으로 기술적 문제 해결 과정을 구체적으로 서술하십시오. 반드시 프레임워크 구조 분해(breakdown)를 포함하십시오.',
-    'technical-skills': hasRepos
-      ? 'JD에서 요구하는 기술과 본인의 GitHub 활동/이력서의 교집합을 강조하십시오. 각 기술에 대한 구체적 활용 경험을 포함하십시오.'
-      : 'JD에서 요구하는 기술과 이력서에 기술된 경험의 교집합을 강조하십시오. 각 기술에 대한 구체적 활용 경험을 포함하십시오.',
-    'motivation': '지원 회사/직무에 대한 관심의 구체적 계기와, 본인의 경험이 어떻게 기여할 수 있는지 연결하십시오.',
-    'growth-plan': '입사 후 구체적인 성장 계획과 기여 방향을 JD의 우대사항/선호경험과 연결하여 제시하십시오.',
-    'custom': '위 [질문 분석]의 Step 2에서 결정한 서술 주어를 글의 중심축으로 삼으십시오. 경험 나열이 아니라, 질문이 요구하는 관점에서 경험을 재구성하여 답변하십시오.',
-  };
-
-  const coachingContext = coachingResult
-    ? `\n[분석 요약]\n- 매칭 점수: ${coachingResult.matchScore}/100\n- 요약: ${coachingResult.summary}\n- 주요 갭:\n${coachingResult.gapMap.slice(0, 5).map(g => `  - [${g.currentLevel}] ${g.requirement}: ${g.suggestion}`).join('\n')}`
-    : '';
-
-  return `[역할]
-당신은 한국 대기업 및 IT 기업의 채용 프로세스에 정통한 자기소개서 작성 전문가입니다.
-
-[현재 날짜]
-${today}
-
-[작성할 섹션]
-${sectionLabel} (최대 ${spec.charLimit}자)
-${spec.type === 'custom'
-  ? `\n[서술형 질문 — 이 질문에 정확히 답변하십시오]\n<user-input>\n${spec.customTitle || '자유 주제'}\n</user-input>${spec.prompt ? `\n\n[추가 지시]\n${spec.prompt}` : ''}\n\n[질문 분석 — 반드시 답변 전에 수행]\n아래 3단계를 거쳐 서술 전략을 결정한 뒤 작성을 시작하십시오:\n\nStep 1. 질문 해체: 이 질문이 요구하는 항목을 분리하십시오.\n  예: "직무 강점과 기여" → ①직무 강점 ②당사 기여\n  예: "프로젝트 내용, 성과, 역할" → ①프로젝트 내용 ②성과 ③본인 역할\n  예: "갈등 상황과 해결" → ①갈등 상황 ②해결 과정 ③결과/교훈\n\nStep 2. 서술 주어 결정: 질문이 무엇을 중심에 놓으라고 요구하는지 판단하십시오.\n  - 역량/강점을 묻는 질문 → 강점이 주어, 경험은 근거로만 (강점 → 이를 증명하는 사례 → 회사 적용)\n  - 프로젝트/경험을 묻는 질문 → 프로젝트가 주어, 기술 디테일과 본인 역할 중심 (배경 → 과제 → 행동 → 결과)\n  - 가치관/성격을 묻는 질문 → 신념이 주어, 경험은 에피소드 (가치관 → 체화된 경험 → 적용 방향)\n  - 기여/포부를 묻는 질문 → 회사가 주어, 본인은 수단 (회사 과제 분석 → 내가 해결할 수 있는 이유 → 구체적 계획)\n  - 위 분류에 해당하지 않으면 질문의 핵심 동사("기술하시오", "서술하시오", "설명하시오")와 목적어를 기준으로 판단하십시오.\n\nStep 3. 경험 선별: 질문의 핵심 포인트에 가장 부합하는 경험을 이력서에서 1-2개만 선택하십시오.\n  - 질문과 직접 연결되는 경험 > JD 요구사항과 맞는 경험 > 정량적 성과가 있는 경험\n  - 질문이 복수 항목을 요구하면, 각 항목에 대해 명확히 구분하여 답하십시오.\n  - 하나의 경험을 여러 각도로 깊게 다루는 것이 여러 경험을 얕게 나열하는 것보다 낫습니다.`
-  : (spec.prompt ? `\n[사용자 지시 — 최우선 준수]\n아래 지시는 이력서 활용 우선순위보다 우선합니다. 반드시 이 방향에 따라 작성하십시오:\n"${spec.prompt}"` : '')}
-
-[프레임워크]
-${frameworkInstruction}
-
-[섹션별 지침]
-${sectionTypeInstruction[spec.type] || sectionTypeInstruction['custom']}
-
-[글자 수 제한 — 엄격히 준수]
-반드시 ${spec.charLimit}자 이내로 작성하십시오.
-목표: 최대 글자 수의 90-95% (${Math.floor(spec.charLimit * 0.9)}~${Math.floor(spec.charLimit * 0.95)}자).
-현재 글자 수를 세면서 작성하십시오.
-
-[어조 규칙]
-- 격식체 종결: "~합니다", "~했습니다", "~입니다"
-- 금지: "~해요", "~했어요", "~예요", "~함.", "~임."
-
-[서사 품질 — 가장 중요]
-1. 인과관계: 모든 문장은 앞 문장의 결과이거나 다음 문장의 원인이어야 합니다. "그래서", "왜냐하면", "이때"의 논리가 문장 사이에 암묵적으로 흘러야 합니다.
-2. 하나를 깊게: 경험 1개를 고민-결정-실행-결과의 맥락으로 깊게 서술하십시오. 여러 경험을 1-2문장씩 나열하면 깊이가 사라집니다.
-3. 고민의 순간: 기술적 결정을 할 때 "왜 A가 아니라 B를 선택했는지", "어떤 트레이드오프가 있었는지"를 드러내십시오. 이것이 서사의 핵심입니다.
-4. 구체적 장면: "분석했습니다"가 아니라 "A와 B를 X 기준으로 비교한 결과 Y 때문에 B를 선택했습니다"처럼 판단 과정을 보여주십시오.
-5. 자연스러운 흐름: K-STAR-K 구조는 내부 설계도일 뿐, 실제 글은 하나의 이야기처럼 읽혀야 합니다. "상황은 ~이고, 과제는 ~이며" 식으로 구조를 노출하지 마십시오.
-6. 전환의 필연성: 다른 경험으로 넘어갈 때 "이러한 경험은 ~에서도 이어졌습니다" 같은 천편일률적 전환 금지. 반드시 앞 경험에서 부족했거나 발전시킨 점을 연결고리로 삼으십시오.
-
-[반환각 방지]
-1. 이력서${hasRepos ? '와 GitHub 데이터' : ''}에 명시된 내용만 활용하십시오.
-2. 없는 경험/기술/수치는 [구체적 경험 기입] 또는 [수치 기입] 플레이스홀더를 사용하십시오.
-${hasRepos ? '3. GitHub 데이터에서 확인 가능한 기술명만 본문에 포함하십시오.' : ''}
-
-${QUANTIFICATION_NARRATIVE}
-
-${formatInstruction(instruction)}
-- 요구사항:
-${instruction.jdRequirements.map((r, i) =>
-  `  ${i+1}. [${r.importance}] [${r.category}] ${r.text}`
-).join('\n')}
-
-[이력서 원문]
-<user-resume>
-${resumeText}
-</user-resume>
-
-[채용 공고 원문]
-<user-jd>
-${jobDescription}
-</user-jd>
-
-${repoInfo ? `[GitHub 리포지토리]\n${repoInfo}` : ''}
-${coachingContext}
-
-[자기 검증]
-작성 완료 후 검증하십시오:
-1. 이력서에 없는 경험/기술/수치가 본문에 포함되었는가? → [플레이스홀더]로 교체
-2. 문장 길이 변화: 가장 짧은 문장 ≤ 20자, 가장 긴 문장 ≥ 60자인가? 아니면 문장을 분리하거나 합쳐서 길이 변화를 만드십시오.
-3. "활용하여", "기반으로", "통해", "바탕으로"가 각 1회 이하인가?`;
-}
 
 // ─────────────────────────────────────────────────────────────
 // Stage 4a: 서술형 분석 (Flash) — 질문 해체 + 경험 선별 + 아웃라인
@@ -451,7 +304,7 @@ ${coachingContext}`;
     model: MODELS.flash,
     contents: prompt,
     config: {
-      systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+      systemInstruction: buildSystemPrompt({ grounding: GROUNDING_FULL }),
       temperature: 0.2,
       thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
       responseMimeType: "application/json",
@@ -618,7 +471,7 @@ async function writeNarrativeFromAnalysis(
     model: MODELS.pro,
     contents: prompt,
     config: {
-      systemInstruction: [SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY].join('\n\n'),
+      systemInstruction: buildSystemPrompt({ grounding: GROUNDING_FULL }),
       temperature: 0.3,
       thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       responseMimeType: "application/json",

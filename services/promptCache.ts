@@ -1,2 +1,2 @@
-export { getAI, applyCacheToConfig, getOrCreateSessionCache, invalidateCache, withSystemInstruction } from '../shared/api/geminiClient';
+export { getAI, getOrCreateSessionCache, invalidateCache, getCacheFields, MODELS } from '../shared/api/geminiClient';
 export type { SessionCache, ModelTier } from '../shared/api/geminiClient';

@@ -4,13 +4,13 @@ import type {
   NarrativeSectionSpec,
   CoverLetterConfig,
 } from '../../../types';
-import { generateCareerStatements } from '../../../services/careerDocService';
-import { generateCoverLetter } from '../../../services/careerDocService';
+import { generateCareerStatements } from '../../career-statement/service';
+import { generateCoverLetter } from '../../cover-letter/service';
 import { generateNarrativeSections } from '../../../services/geminiService';
-import { analyzeAtsScore } from '../../../services/atsService';
+import { analyzeAtsScore } from '../../ats-score/service';
 import { generateInterviewQuestions } from '../../interview/service';
 import { generatePractitionerReview } from '../../practitioner/service';
-import { generateLinkedInOptimization } from '../../../services/skillGapService';
+import { generateLinkedInOptimization } from '../../linkedin/service';
 
 // ─────────────────────────────────────────────────────────────
 // Types

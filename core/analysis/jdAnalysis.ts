@@ -5,8 +5,8 @@ import { withRetry } from "../../shared/api/retry";
 import { validateJDInput } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
 import {
-  SECURITY_RULE,
   GROUNDING_FULL,
+  buildSystemPrompt,
 } from "../../shared/prompt/promptBlocks";
 
 export const DEFAULT_INSTRUCTION: TailoredInstructionWithRequirements = {
@@ -80,7 +80,7 @@ export async function generateTailoredInstruction(
       model: MODELS.flash,
       contents: metaPrompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_FULL].join('\n\n'),
+        systemInstruction: buildSystemPrompt({ grounding: GROUNDING_FULL, includeHierarchy: false }),
         temperature: 0.2,
         thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",

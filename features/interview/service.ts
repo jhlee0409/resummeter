@@ -3,11 +3,10 @@ import { InterviewQuestion, InterviewFeedback, TailoredInstructionWithRequiremen
 import { getAI } from "../../services/promptCache";
 import { MODELS } from "../../shared/api/geminiClient";
 import {
-  SECURITY_RULE,
   GROUNDING_BASIC,
-  RESUME_HIERARCHY,
   HR_PERSPECTIVE_INTERVIEW,
   formatInstruction,
+  buildSystemPrompt,
 } from "../../services/promptBlocks";
 import { formatCompanyContext } from '../../core/research/companyResearch';
 import { withRetry } from '../../services/retry';
@@ -92,7 +91,7 @@ BAD 인성 질문: "팀워크에 대해 어떻게 생각하시나요?" (이력�
       model: MODELS.pro,
       contents: prompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n'),
+        systemInstruction: buildSystemPrompt({ grounding: GROUNDING_BASIC }),
         temperature: 0.3,
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         responseMimeType: "application/json",
@@ -218,7 +217,7 @@ ${jobDescription}
       model: MODELS.flash,
       contents: prompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_BASIC, RESUME_HIERARCHY].join('\n\n'),
+        systemInstruction: buildSystemPrompt({ grounding: GROUNDING_BASIC }),
         temperature: 0.3,
         thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",

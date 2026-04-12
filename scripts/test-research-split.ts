@@ -52,7 +52,15 @@ for (const c of cases) {
 
   // merge → scoring
   const ctx = mergeResearchResults(companyInfo, jobRoleInfo);
-  const coach = await coachResume(resumeText, jd, instruction, [{ url: '', description: '' }], undefined, () => {}, ctx);
+  const coach = await coachResume({
+    resumeText,
+    jobDescription: jd,
+    instruction,
+    githubRepos: [{ url: '', description: '' }],
+    githubData: undefined,
+    onStageChange: () => {},
+    companyContext: ctx,
+  });
   const scoring = calculateScore(coach.gapMap, instruction, resumeText, jd, ctx);
   const label = LEVEL_LABELS[scoring.level].label;
 

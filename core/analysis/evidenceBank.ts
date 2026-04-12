@@ -5,8 +5,8 @@ import { withRetry } from "../../shared/api/retry";
 import { safeParseJSON } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
 import {
-  SECURITY_RULE,
   GROUNDING_FULL,
+  buildSystemPrompt,
 } from "../../shared/prompt/promptBlocks";
 
 // ─────────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ ${githubDataFormatted}
       model: MODELS.flash,
       contents: prompt,
       config: {
-        systemInstruction: [SECURITY_RULE, GROUNDING_FULL].join('\n\n'),
+        systemInstruction: buildSystemPrompt({ grounding: GROUNDING_FULL, includeHierarchy: false }),
         temperature: 0.2,
         thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         responseMimeType: "application/json",

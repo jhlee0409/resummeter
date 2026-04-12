@@ -40,7 +40,15 @@ const ctx = mergeResearchResults(companyInfo, jobRoleInfo);
 // Stage 2: coaching도 캐시
 const coachStart = Date.now();
 const coach = await cached('coaching', [resumeText.slice(0, 200), jdText.slice(0, 200), company, jobTitle], () =>
-  coachResume(resumeText, jdText, instruction, [{ url: '', description: '' }], undefined, () => {}, ctx)
+  coachResume({
+    resumeText,
+    jobDescription: jdText,
+    instruction,
+    githubRepos: [{ url: '', description: '' }],
+    githubData: undefined,
+    onStageChange: () => {},
+    companyContext: ctx,
+  })
 );
 console.log(`Stage 2: ${Date.now() - coachStart}ms`);
 

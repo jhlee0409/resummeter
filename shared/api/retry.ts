@@ -9,11 +9,17 @@ function sleep(ms: number): Promise<void> {
 export async function withRetry<T>(
   fn: () => Promise<T>,
   maxAttempts = 3,
-  baseDelay = 1000
+  baseDelay = 1000,
+  timeoutMs = 60000
 ): Promise<T> {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      return await fn();
+      return await Promise.race([
+        fn(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Request timeout after ${timeoutMs}ms`)), timeoutMs)
+        ),
+      ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const isRateLimited = msg.includes('429') || msg.toLowerCase().includes('rate limit');

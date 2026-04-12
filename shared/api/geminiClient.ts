@@ -178,31 +178,6 @@ export function getCacheFields(
 }
 
 /**
- * generateContent 호출에 캐시를 적용합니다.
- * 캐시가 있으면 cachedContent를 사용하고,
- * 없으면 systemInstruction + 인라인 컨텍스트로 폴백합니다.
- */
-export function applyCacheToConfig(
-  session: SessionCache,
-  taskPrompt: string,
-  config: Record<string, unknown>
-): { contents: string; config: Record<string, unknown> } {
-  if (session.cacheName) {
-    // 캐시 히트: 태스크 프롬프트만 전송
-    return {
-      contents: taskPrompt,
-      config: { ...config, cachedContent: session.cacheName },
-    };
-  }
-
-  // 캐시 미스: systemInstruction으로 공통 블록 분리 + 컨텍스트 인라인
-  return {
-    contents: `${session.contextBlock}\n\n${taskPrompt}`,
-    config: { ...config, systemInstruction: session.systemPrompt },
-  };
-}
-
-/**
  * 세션 캐시를 무효화합니다.
  * 새 이력서/JD 입력 시 호출하세요.
  */
@@ -221,18 +196,4 @@ export async function invalidateCache(): Promise<void> {
 
   _flashCache = null;
   _proCache = null;
-}
-
-/**
- * systemInstruction만 사용하는 간단한 config 생성.
- * 캐싱이 불필요한 1회성 호출(JD 분석 등)에 사용합니다.
- */
-export function withSystemInstruction(
-  config: Record<string, unknown>,
-  systemPrompt?: string
-): Record<string, unknown> {
-  return {
-    ...config,
-    systemInstruction: systemPrompt || COMMON_SYSTEM_PROMPT,
-  };
 }

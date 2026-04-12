@@ -45,7 +45,14 @@ for (const jd of jds) {
   // LLM 코칭
   process.stdout.write('  코칭 분석 중...');
   const instruction = await generateTailoredInstruction(jdText);
-  const coach = await coachResume(resumeText, jdText, instruction, [{ url: '', description: '' }], undefined, () => {});
+  const coach = await coachResume({
+    resumeText,
+    jobDescription: jdText,
+    instruction,
+    githubRepos: [{ url: '', description: '' }],
+    githubData: undefined,
+    onStageChange: () => {},
+  });
   console.log(' ✓');
 
   // Scoring Engine
