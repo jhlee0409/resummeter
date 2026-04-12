@@ -4,12 +4,11 @@
  */
 
 import { Type, ThinkingLevel } from '@google/genai';
-import { getAI } from '../../services/promptCache';
-import { MODELS } from '../../shared/api/geminiClient';
-import { withRetry } from '../../services/retry';
-import { validateResumeInput, validateJDInput, safeParseJSON } from '../../services/validation';
-import { classifyError } from '../../services/errors';
-import { GROUNDING_FULL, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS, buildSystemPrompt } from '../../services/promptBlocks';
+import { getAI, MODELS } from '../../shared/api/geminiClient';
+import { withRetry } from '../../shared/api/retry';
+import { validateResumeInput, validateJDInput, safeParseJSON } from '../../shared/lib/validation';
+import { classifyError } from '../../shared/lib/errors';
+import { GROUNDING_FULL, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS, buildSystemPrompt } from '../../shared/prompt/promptBlocks';
 import { formatCompanyContext } from '../../core/research/companyResearch';
 import type { CompanyContext, GapAnalysisResult, GapMatch, TailoredInstructionWithRequirements } from '../../types';
 

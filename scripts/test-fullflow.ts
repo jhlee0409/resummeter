@@ -14,7 +14,8 @@ process.env.GEMINI_API_KEY = apiKey;
 process.env.API_KEY = apiKey;
 
 // 서비스 임포트
-const { generateTailoredInstruction, coachResume } = await import('../services/geminiService');
+const { generateTailoredInstruction } = await import('../core/analysis/jdAnalysis');
+const { coachResume } = await import('../core/analysis/coaching');
 const { researchCompany, researchJobRole, mergeResearchResults } = await import('../core/research/companyResearch');
 const { analyzeGap } = await import('../features/gap-analysis/service');
 

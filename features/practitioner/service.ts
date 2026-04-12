@@ -1,12 +1,11 @@
 import { Type, ThinkingLevel } from "@google/genai";
-import { getAI } from '../../services/promptCache';
-import { MODELS } from '../../shared/api/geminiClient';
+import { getAI, MODELS } from '../../shared/api/geminiClient';
 import type { TailoredInstructionWithRequirements, Industry } from '../../types';
-import { withRetry } from '../../services/retry';
-import { validateResumeInput, safeParseJSON } from '../../services/validation';
-import { classifyError } from '../../services/errors';
+import { withRetry } from '../../shared/api/retry';
+import { validateResumeInput, safeParseJSON } from '../../shared/lib/validation';
+import { classifyError } from '../../shared/lib/errors';
 import { INDUSTRY_PROFILES } from '../../core/research/industryDetect';
-import { SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY } from '../../services/promptBlocks';
+import { SECURITY_RULE, GROUNDING_FULL, RESUME_HIERARCHY } from '../../shared/prompt/promptBlocks';
 
 export interface PractitionerReview {
   perspective: string;  // "CTO" | "리스크관리팀장" | etc.

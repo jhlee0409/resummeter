@@ -4,7 +4,7 @@ import { validatePdfFile, extractPdfText, cancelExtraction, getErrorMessage } fr
 import { fetchAllRepos } from '../features/upload/services/githubService';
 // company research is now triggered at analysis start in App.tsx
 import { resumeTemplates, industries, type ResumeTemplate } from '../data/templates';
-import { track } from '../services/analytics';
+import { track } from '../shared/lib/analytics';
 import { hasCachedAnalysis } from '../features/review/services/analysisCache';
 
 interface UploadStepProps {

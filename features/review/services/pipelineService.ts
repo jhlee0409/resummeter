@@ -6,7 +6,7 @@ import type {
 } from '../../../types';
 import { generateCareerStatements } from '../../career-statement/service';
 import { generateCoverLetter } from '../../cover-letter/service';
-import { generateNarrativeSections } from '../../../services/geminiService';
+import { generateNarrativeSections } from '../../narrative/service';
 import { analyzeAtsScore } from '../../ats-score/service';
 import { generateInterviewQuestions } from '../../interview/service';
 import { generatePractitionerReview } from '../../practitioner/service';

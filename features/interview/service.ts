@@ -1,17 +1,16 @@
 import { Type, ThinkingLevel } from "@google/genai";
 import { InterviewQuestion, InterviewFeedback, TailoredInstructionWithRequirements, CompanyContext } from "../../types";
-import { getAI } from "../../services/promptCache";
-import { MODELS } from "../../shared/api/geminiClient";
+import { getAI, MODELS } from "../../shared/api/geminiClient";
 import {
   GROUNDING_BASIC,
   HR_PERSPECTIVE_INTERVIEW,
   formatInstruction,
   buildSystemPrompt,
-} from "../../services/promptBlocks";
+} from "../../shared/prompt/promptBlocks";
 import { formatCompanyContext } from '../../core/research/companyResearch';
-import { withRetry } from '../../services/retry';
-import { validateResumeInput, validateJDInput, safeParseJSON } from '../../services/validation';
-import { classifyError } from '../../services/errors';
+import { withRetry } from '../../shared/api/retry';
+import { validateResumeInput, validateJDInput, safeParseJSON } from '../../shared/lib/validation';
+import { classifyError } from '../../shared/lib/errors';
 
 // ─────────────────────────────────────────────────────────────
 // Generate Interview Questions (Pro Model)

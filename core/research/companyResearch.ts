@@ -4,11 +4,10 @@
  * 회사 리서치와 직무 리서치를 분리하여 병렬 실행.
  */
 
-import { getAI } from '../../services/promptCache';
-import { MODELS } from '../../shared/api/geminiClient';
-import { withRetry } from '../../services/retry';
-import { safeParseJSON } from '../../services/validation';
-import { classifyError } from '../../services/errors';
+import { getAI, MODELS } from '../../shared/api/geminiClient';
+import { withRetry } from '../../shared/api/retry';
+import { safeParseJSON } from '../../shared/lib/validation';
+import { classifyError } from '../../shared/lib/errors';
 import type { CompanyInfo, JobRoleInfo, CompanyContext } from '../../types';
 
 const RESEARCH_MODEL = MODELS.flashLite;

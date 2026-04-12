@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { resumeExamples, exampleIndustries, type ResumeExample } from '../../data/examples';
-import { track } from '../../services/analytics';
+import { track } from '../../shared/lib/analytics';
 
 export const ExampleBrowserView: React.FC = () => {
   const [selectedIndustry, setSelectedIndustry] = useState<string | null>(null);

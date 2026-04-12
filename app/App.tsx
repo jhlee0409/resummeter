@@ -1,24 +1,27 @@
 import React, { useState, useCallback } from 'react';
+import { useSessionState } from '../shared/hooks/useSessionState';
 import { Toaster } from 'sonner';
 import { Stepper } from '../shared/ui/Stepper';
 import { UploadStep } from '../components/UploadStep';
 import { AnalysisStep } from '../features/analysis/AnalysisStep';
 import { ReviewStep } from '../components/ReviewStep';
 import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from '../types';
-import { generateTailoredInstruction, coachResume, enrichEvidenceBank } from '../services/geminiService';
-import { track } from '../services/analytics';
+import { generateTailoredInstruction } from '../core/analysis/jdAnalysis';
+import { coachResume } from '../core/analysis/coaching';
+import { enrichEvidenceBank } from '../core/analysis/evidenceBank';
+import { track } from '../shared/lib/analytics';
 import { getCachedAnalysis, setCachedAnalysis, getCachedAnalysisByKey } from '../features/review/services/analysisCache';
 import { PreviousAnalysesPanel } from '../features/review/PreviousAnalysesPanel';
 import { calculateScore } from '../core/scoring/scoringEngine';
 import { researchCompany, researchJobRole, mergeResearchResults } from '../core/research/companyResearch';
-import { getOrCreateSessionCache, invalidateCache, type SessionCache } from '../services/promptCache';
+import { getOrCreateSessionCache, invalidateCache, type SessionCache } from '../shared/api/geminiClient';
 import { toast } from 'sonner';
 import { useFeatureStore } from '../stores/featureStore';
 
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.UPLOAD);
 
-  const [userData, setUserData] = useState<UserInputData>({
+  const [userData, setUserData] = useSessionState<UserInputData>('resummeter_user_input', {
     resumeText: '',
     jobDescription: '',
     companyName: '',

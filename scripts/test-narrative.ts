@@ -12,7 +12,9 @@ if (!apiKey) { console.error('GEMINI_API_KEY not found'); process.exit(1); }
 process.env.GEMINI_API_KEY = apiKey;
 process.env.API_KEY = apiKey;
 
-const { generateTailoredInstruction, coachResume, generateNarrativeSections } = await import('../services/geminiService');
+const { generateTailoredInstruction } = await import('../core/analysis/jdAnalysis');
+const { coachResume } = await import('../core/analysis/coaching');
+const { generateNarrativeSections } = await import('../features/narrative/service');
 const { researchCompany, researchJobRole, mergeResearchResults } = await import('../core/research/companyResearch');
 import type { NarrativeSectionSpec } from '../types';
 

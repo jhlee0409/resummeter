@@ -13,7 +13,8 @@ process.env.API_KEY = apiKey;
 
 const { researchCompany, researchJobRole, mergeResearchResults } = await import('../core/research/companyResearch');
 const { calculateScore, LEVEL_LABELS } = await import('../core/scoring/scoringEngine');
-const { generateTailoredInstruction, coachResume } = await import('../services/geminiService');
+const { generateTailoredInstruction } = await import('../core/analysis/jdAnalysis');
+const { coachResume } = await import('../core/analysis/coaching');
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');
 const jdText = readFileSync('/tmp/resummeter-jd.txt', 'utf-8');

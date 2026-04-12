@@ -12,7 +12,7 @@ if (!apiKey) { console.error('GEMINI_API_KEY not found'); process.exit(1); }
 process.env.GEMINI_API_KEY = apiKey;
 process.env.API_KEY = apiKey;
 
-const { generateTailoredInstruction } = await import('../services/geminiService');
+const { generateTailoredInstruction } = await import('../core/analysis/jdAnalysis');
 const { calculateScore, LEVEL_LABELS } = await import('../core/scoring/scoringEngine');
 
 const resumeText = readFileSync('/tmp/resummeter-resume.txt', 'utf-8');

@@ -97,8 +97,13 @@ export function parseResumeExperience(resumeText: string): ParsedResume {
 
   const lines = resumeText.split('\n');
   for (const line of lines) {
-    // 프로젝트 라인 스킵: [프로젝트명] 패턴
+    // 프로젝트/하위 항목 라인 스킵:
+    // - [프로젝트명] 패턴
+    // - 불릿 마커로 시작 (-, *, •, ▪, ▸, ·, ○, ◦)
+    // - 들여쓰기(공백/탭) 후 시작 (하위 항목 표기)
     if (/^\s*\[/.test(line)) continue;
+    if (/^[\s\t]*[-*•▪▸·○◦]/.test(line)) continue;
+    if (/^[\s\t]{2,}/.test(line)) continue;
 
     for (const pattern of DATE_PATTERNS) {
       pattern.lastIndex = 0;
