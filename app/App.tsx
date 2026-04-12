@@ -205,8 +205,10 @@ const App: React.FC = () => {
 
           <div className={currentStep !== AppStep.ANALYSIS ? 'mt-8' : ''}>
             {currentStep === AppStep.UPLOAD && (
-              <div className="animate-fade-in-up space-y-6">
-                <PreviousAnalysesPanel onLoad={handleLoadByCacheKey} />
+              <div className="animate-fade-in-up">
+                <div className="max-w-4xl mx-auto mb-5">
+                  <PreviousAnalysesPanel onLoad={handleLoadByCacheKey} />
+                </div>
                 <UploadStep
                   data={userData}
                   onChange={handleInputChange}
