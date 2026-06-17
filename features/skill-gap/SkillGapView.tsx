@@ -170,11 +170,11 @@ export default function SkillGapView({ gapMap, jobDescription, instruction, comp
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-3 p-3 bg-gray-800/50 rounded hover:bg-gray-700/50 transition-colors border border-gray-700"
                               >
-                                <div className="text-2xl">{platformIcons[resource.platform]}</div>
+                                <div className="text-2xl">{platformIcons[resource.platform] ?? "🔗"}</div>
                                 <div className="flex-1 min-w-0">
                                   <div className="text-sm font-medium text-white truncate">{resource.title}</div>
                                   <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-xs text-gray-400">{platformLabels[resource.platform]}</span>
+                                    <span className="text-xs text-gray-400">{platformLabels[resource.platform] ?? resource.platform}</span>
                                     <span className="text-xs text-gray-500">•</span>
                                     <span className="text-xs text-gray-400 capitalize">{resource.level}</span>
                                   </div>

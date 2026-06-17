@@ -32,7 +32,8 @@ export interface AtsScore {
 export interface DetailedScore {
   overall: number;
   breakdown: {
-    techStack: { score: number; weight: number; details: string[] };
+    /** 직무 핵심 역량 관련성 (기술직=기술스택, 그 외=직무 핵심 실무역량) */
+    coreSkills: { score: number; weight: number; details: string[] };
     experience: { score: number; weight: number; details: string[] };
     impact: { score: number; weight: number; details: string[] };
     readability: { score: number; weight: number; details: string[] };

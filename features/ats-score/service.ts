@@ -61,17 +61,16 @@ ${resumeText}
 
 [Few-shot 예시]
 GOOD 키워드 분석:
-- keyword: "React", foundInResume: true, frequency: 3, context: "React 기반 SPA 개발 경험 2년, React Query로 서버 상태 관리", suggestion: null
-- keyword: "CI/CD", foundInResume: false, frequency: 0, context: null, suggestion: "배포 자동화 경험이 있다면 CI/CD 파이프라인 구축 경험을 추가하세요"
+- 직무 핵심 키워드가 이력서에 구체적 맥락과 함께 등장 → foundInResume: true, frequency: 실제 횟수, context: "그 키워드가 성과/경험 안에서 쓰인 구체적 맥락", suggestion: null
+- JD엔 있으나 이력서에 없는 키워드 → foundInResume: false, suggestion: "관련 경험이 있다면 ○○ 경험을 추가하세요" (실제 보유 경험이 있을 때만)
 BAD 키워드 분석 (피하세요):
 - keyword: "리더십", foundInResume: true, frequency: 1, context: "리더십 발휘" ← 너무 모호. 구체적 맥락 필요
-- keyword: "Python", foundInResume: false, suggestion: "Python을 추가하세요" ← 이력서에 Python 경험이 없는데 추가하라는 건 잘못됨
+- 이력서에 없는 역량을 무작정 "추가하세요"라고 제안 ← 보유하지 않은 경험을 지어내라는 건 잘못됨
 
 [시맨틱 매칭 분석]
 키워드의 정확한 텍스트 일치뿐 아니라 의미적 유사성도 평가하십시오:
 - "프로젝트 관리" ≈ "PM" ≈ "프로젝트 리드" ≈ "프로젝트 매니지먼트"
-- "MSA" ≈ "마이크로서비스 아키텍처" ≈ "마이크로서비스"
-- "CI/CD" ≈ "지속적 통합/배포" ≈ "배포 자동화"
+- 약어 ≈ 풀네임, 상위개념 ≈ 하위개념 등 해당 직무 도메인의 동의어를 함께 인정
 - 시맨틱 매칭 결과는 각 키워드의 context 필드에 "(시맨틱 매칭)" 표시
 - 2026년 ATS는 NLP 기반 시맨틱 매칭을 사용하므로 정확한 텍스트 일치와 의미적 유사성을 모두 평가
 
@@ -228,10 +227,11 @@ ${HR_PERSPECTIVE_ATS}
 ## 분석 요구사항
 
 1. **섹션별 점수 (breakdown)**:
-   - techStack: 기술 스택 관련성 (가중치 40%, 0-100점)
-   - experience: 경력 관련성 (가중치 25%, 0-100점)
-   - impact: 임팩트/성과 (가중치 20%, 0-100점)
-   - readability: 가독성/구조 (가중치 15%, 0-100점)
+   - coreSkills: 직무 핵심 역량 관련성 (0-100점) — 기술직이면 기술 스택, 그 외엔 직무 핵심 실무역량/전문지식
+   - experience: 경력 관련성 (0-100점)
+   - impact: 임팩트/성과 (0-100점)
+   - readability: 가독성/구조 (0-100점)
+   - weight: 각 섹션 가중치(0~1, 합 1.0)를 **직무 특성에 맞게** 배분하세요. 위 [맞춤형 지시사항]의 jobProfile.evaluationWeights를 참고하되, 일반적으로 핵심역량 0.35~0.45 / 경력 0.20~0.30 / 임팩트 0.15~0.25 / 가독성 0.10~0.15 범위에서 조정하세요.
    - 각 섹션의 details에는 구체적인 평가 내용을 배열로 담으세요.
 
 2. **Action Verb 분석 (actionVerbs)**:
@@ -242,8 +242,8 @@ ${HR_PERSPECTIVE_ATS}
    - strong: 이미 사용된 강한 동사 목록
 
 [Action Verb Few-shot 예시]
-GOOD: verb: "담당했다", line: "서버 개발을 담당했다", suggestion: "서버 아키텍처를 설계하고 구축했다"
-GOOD: verb: "했다", line: "테스트를 했다", suggestion: "단위 테스트 커버리지를 85%까지 확보했다"
+GOOD: verb: "담당했다", line: "고객사 영업을 담당했다", suggestion: "신규 고객사 12곳을 발굴해 연 매출 3억을 신규 창출했다"
+GOOD: verb: "했다", line: "캠페인을 했다", suggestion: "타겟 캠페인을 설계·집행해 전환율을 3.5%까지 끌어올렸다"
 BAD (피하세요): verb: "활용했다", suggestion: "사용했다" ← 단순 동의어 교체는 의미 없음. 구체적 성과 동사로 바꿔야 함
 
 3. **정량화 분석 (quantification)**:
@@ -271,7 +271,7 @@ JSON 스키마에 맞춰 반환하세요.
 
 [자기검증 체크리스트]
 응답 전 반드시 확인하십시오:
-1. overall 점수가 breakdown 4개 항목의 가중합(40/25/20/15)과 일치하는가?
+1. overall 점수가 breakdown 4개 항목의 score×weight 가중합과 일치하는가? (weight 합 = 1.0)
 2. actionVerbs.weak의 각 동사가 실제 이력서에 등장하는가?
 3. quantification.needsQuantification의 각 항목이 실제 이력서에 수치 없이 등장하는가?
 4. starAnalysis의 completeness 점수가 hasS/hasT/hasA/hasR와 논리적으로 일치하는가?`;
@@ -293,7 +293,7 @@ JSON 스키마에 맞춰 반환하세요.
             breakdown: {
               type: Type.OBJECT,
               properties: {
-                techStack: {
+                coreSkills: {
                   type: Type.OBJECT,
                   properties: {
                     score: { type: Type.NUMBER },
@@ -342,7 +342,7 @@ JSON 스키마에 맞춰 반환하세요.
                   required: ["score", "weight", "details"],
                 },
               },
-              required: ["techStack", "experience", "impact", "readability"],
+              required: ["coreSkills", "experience", "impact", "readability"],
             },
             actionVerbs: {
               type: Type.OBJECT,
@@ -423,7 +423,20 @@ JSON 스키마에 맞춰 반환하세요.
     }));
 
     const jsonText = response.text;
-    return safeParseJSON<DetailedScore>(jsonText, '상세 점수 분석');
+    const parsed = safeParseJSON<DetailedScore>(jsonText, '상세 점수 분석');
+    // LLM이 동적으로 정한 섹션 가중치 합이 1.0이 아닐 수 있음 → 정규화하여
+    // UI 표시(weight*100%)와 overall 계산 기준을 일관되게 맞춤
+    const b = parsed.breakdown;
+    if (b?.coreSkills && b.experience && b.impact && b.readability) {
+      const total = b.coreSkills.weight + b.experience.weight + b.impact.weight + b.readability.weight;
+      if (total > 0 && Math.abs(total - 1) > 0.001) {
+        b.coreSkills.weight /= total;
+        b.experience.weight /= total;
+        b.impact.weight /= total;
+        b.readability.weight /= total;
+      }
+    }
+    return parsed;
   } catch (error) {
     console.error("상세 점수 분석 중 오류 발생:", error);
     throw classifyError(error);

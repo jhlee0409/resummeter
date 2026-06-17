@@ -94,7 +94,7 @@ Required Elements:
 
   const prompt = isKorean
     ? `[역할]
-당신은 한국 IT 기업 채용 전문가입니다.
+당신은 한국 기업 채용 전문가입니다.
 지원동기서 작성에 특화되어 있으며, JD 요구사항과 지원자 경험의 연결점을 자연스럽게 풀어내는 전문가입니다.
 ${companyBlock}
 

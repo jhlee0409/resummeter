@@ -1,7 +1,8 @@
 import React, { useRef, useState, useCallback, useEffect } from 'react';
-import { UserInputData, GithubRepo, PdfExtractionProgress, PdfExtractionResult, GitHubFetchResult, CompanyContext } from '../types';
+import { UserInputData, GithubRepo, PdfExtractionProgress, PdfExtractionResult, GitHubFetchResult, CompanyContext, EvidenceInput } from '../types';
 import { validatePdfFile, extractPdfText, cancelExtraction, getErrorMessage } from '../features/upload/services/pdfService';
 import { fetchAllRepos } from '../features/upload/services/githubService';
+import { fileToBase64, isSupportedEvidenceFile, MAX_EVIDENCE_FILE_SIZE } from '../features/upload/services/fileService';
 // company research is now triggered at analysis start in App.tsx
 import { resumeTemplates, industries, type ResumeTemplate } from '../data/templates';
 import { track } from '../shared/lib/analytics';
@@ -30,6 +31,9 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
   const [isFetchingGithub, setIsFetchingGithub] = useState(false);
   const [githubWarning, setGithubWarning] = useState<string | null>(null);
   const [githubExpanded, setGithubExpanded] = useState(false);
+  const evidenceFileRef = useRef<HTMLInputElement>(null);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
+  const [evidenceExpanded, setEvidenceExpanded] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
   const [templateFilter, setTemplateFilter] = useState<string | null>(null);
   // company research state removed — now auto-triggered at analysis start
@@ -129,6 +133,37 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
   const removeRepoField = (index: number) => {
     const newRepos = repos.filter((_, i) => i !== index);
     onChange('githubRepos', newRepos.length ? newRepos : [{ url: '', description: '' }]);
+  };
+
+  // ── 추가 자료(증빙) — 모든 직무용 파일/메모 ──
+  const evidenceInputs = data.evidenceInputs ?? [];
+  const addEvidenceFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setEvidenceError(null);
+    const added: EvidenceInput[] = [];
+    for (const file of Array.from(files)) {
+      if (!isSupportedEvidenceFile(file)) { setEvidenceError(`${file.name}: 지원하지 않는 형식입니다 (PDF/PNG/JPG/WEBP)`); continue; }
+      if (file.size > MAX_EVIDENCE_FILE_SIZE) { setEvidenceError(`${file.name}: 파일이 너무 큽니다 (최대 10MB)`); continue; }
+      const { mimeType, dataBase64 } = await fileToBase64(file);
+      added.push({ id: `f-${Date.now()}-${added.length}-${file.name}`, kind: 'file', label: file.name, fileName: file.name, mimeType, dataBase64 });
+    }
+    if (added.length) onChange('evidenceInputs', [...evidenceInputs, ...added]);
+    if (evidenceFileRef.current) evidenceFileRef.current.value = '';
+  };
+  const addEvidenceNote = () => {
+    onChange('evidenceInputs', [...evidenceInputs, { id: `t-${Date.now()}`, kind: 'text', label: '메모', text: '' }]);
+  };
+  const addEvidenceLink = () => {
+    onChange('evidenceInputs', [...evidenceInputs, { id: `l-${Date.now()}`, kind: 'link', label: '링크', url: '', text: '' }]);
+  };
+  const updateEvidenceText = (id: string, text: string) => {
+    onChange('evidenceInputs', evidenceInputs.map(e => e.id === id ? { ...e, text } : e));
+  };
+  const updateEvidenceUrl = (id: string, url: string) => {
+    onChange('evidenceInputs', evidenceInputs.map(e => e.id === id ? { ...e, url } : e));
+  };
+  const removeEvidenceInput = (id: string) => {
+    onChange('evidenceInputs', evidenceInputs.filter(e => e.id !== id));
   };
 
   const githubRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\/[a-zA-Z0-9._-]+$/;
@@ -660,6 +695,117 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
             </svg>
             리포지토리 추가
           </button>
+        </div>}
+      </section>
+
+      {/* Section: 추가 자료 (증빙) — 모든 직무용 (collapsible) */}
+      <section className="glass-card rounded-2xl overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setEvidenceExpanded(prev => !prev)}
+          className="w-full px-5 py-4 border-b border-white/[0.06] flex items-center gap-3 hover:bg-white/[0.02] transition-colors"
+        >
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white section-num shadow-md shadow-brand-500/30">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+          </div>
+          <div className="flex-1 text-left">
+            <h3 className="text-sm font-bold text-zinc-200">추가 자료 <span className="text-[10px] font-normal text-zinc-500 ml-1.5">선택사항 · 모든 직무</span></h3>
+            <p className="text-xs text-zinc-500 mt-0.5">포트폴리오·실적표·수상이력 등 PDF/이미지나 메모를 첨부하면 AI가 직무 맥락에서 근거로 활용합니다</p>
+          </div>
+          <svg className={`w-4 h-4 text-zinc-500 transition-transform ${evidenceExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {evidenceExpanded && <div className="p-5 space-y-3">
+          {/* 파일 업로드 */}
+          <input
+            ref={evidenceFileRef}
+            type="file"
+            accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"
+            multiple
+            className="hidden"
+            onChange={(e) => addEvidenceFiles(e.target.files)}
+          />
+          <button
+            type="button"
+            onClick={() => evidenceFileRef.current?.click()}
+            className="w-full rounded-xl border border-dashed border-zinc-700/60 bg-dark-800/30 px-4 py-5 text-center hover:border-brand-500/40 hover:bg-white/[0.02] transition-all"
+          >
+            <svg className="w-5 h-5 mx-auto text-zinc-500 mb-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            <span className="text-sm text-zinc-300 font-medium">파일 첨부</span>
+            <span className="block text-[11px] text-zinc-600 mt-0.5">PDF · PNG · JPG · WEBP (최대 10MB)</span>
+          </button>
+
+          {evidenceError && (
+            <p className="text-[11px] text-red-400 flex items-center gap-1">
+              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+              {evidenceError}
+            </p>
+          )}
+
+          {/* 첨부된 증빙 목록 */}
+          {evidenceInputs.map((ev) => (
+            <div key={ev.id} className="rounded-xl border border-zinc-700/30 bg-dark-800/30 p-3 flex items-start gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-zinc-800/60 flex items-center justify-center text-zinc-400 shrink-0 mt-0.5">
+                {ev.kind === 'file' ? (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                )}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1.5">
+                {ev.kind === 'file' && (
+                  <p className="text-sm text-zinc-200 truncate">{ev.fileName}</p>
+                )}
+                {ev.kind === 'link' && (
+                  <input
+                    type="url"
+                    className="w-full text-sm px-2.5 py-1.5 border border-zinc-700/50 rounded-lg bg-dark-800/50 text-zinc-200 placeholder-zinc-600 outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500/40"
+                    placeholder="https://… (포트폴리오·발행물·프로필 등)"
+                    value={ev.url ?? ''}
+                    onChange={(e) => updateEvidenceUrl(ev.id, e.target.value)}
+                  />
+                )}
+                {(ev.kind === 'text' || ev.kind === 'link') && (
+                  <textarea
+                    rows={2}
+                    className="w-full text-sm px-2.5 py-1.5 border border-zinc-700/50 rounded-lg bg-dark-800/50 text-zinc-200 placeholder-zinc-600 outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500/40 resize-none"
+                    placeholder={ev.kind === 'link' ? '이 링크가 무엇인지 설명해주세요 (예: 디자인 포트폴리오, 기고문)' : '실적·수상·자격 등 증빙이 될 내용을 적어주세요 (예: 2025 영업왕 수상, 신규 고객 35곳 발굴)'}
+                    value={ev.text ?? ''}
+                    onChange={(e) => updateEvidenceText(ev.id, e.target.value)}
+                  />
+                )}
+              </div>
+              <button
+                onClick={() => removeEvidenceInput(ev.id)}
+                className="p-1.5 text-zinc-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+          ))}
+
+          <div className="flex items-center gap-4 mt-1">
+            <button
+              onClick={addEvidenceNote}
+              className="flex items-center gap-1.5 text-sm text-brand-400 font-semibold hover:text-brand-300 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              텍스트 메모 추가
+            </button>
+            <button
+              onClick={addEvidenceLink}
+              className="flex items-center gap-1.5 text-sm text-brand-400 font-semibold hover:text-brand-300 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              링크 추가
+            </button>
+          </div>
         </div>}
       </section>
 

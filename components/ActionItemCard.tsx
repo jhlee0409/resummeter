@@ -28,6 +28,9 @@ const evidenceTypeLabels: Record<string, { label: string; bg: string; text: stri
   'jd': { label: 'JD 근거', bg: 'bg-blue-500/10', text: 'text-blue-400' },
   'github': { label: 'GitHub 근거', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
   'best-practice': { label: 'Best Practice', bg: 'bg-purple-500/10', text: 'text-purple-400' },
+  'portfolio': { label: '포트폴리오', bg: 'bg-amber-500/10', text: 'text-amber-400' },
+  'document': { label: '문서 근거', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+  'link': { label: '링크 근거', bg: 'bg-indigo-500/10', text: 'text-indigo-400' },
 };
 
 export const ActionItemCard: React.FC<ActionItemCardProps> = ({ item, accepted, onToggle, highlighted }) => {

@@ -10,8 +10,56 @@ import type {
   FitLevel,
   Penalty,
   CompanyContext,
+  JobProfile,
 } from '../../types';
 import { parseJDRequirements, parseResumeExperience } from './requirementParser';
+
+/** 균형 프로파일 기준 카테고리 감점 예산 (jobProfile 부재 시 폴백, 합 60) */
+const DEFAULT_BASE_DEDUCTIONS = {
+  'hard-skill': 25,
+  'experience': 20,
+  'soft-skill': 10,
+  'education': 5,
+} as const;
+
+type CategoryDeductions = Record<'hard-skill' | 'experience' | 'soft-skill' | 'education', number>;
+
+/**
+ * 카테고리별 감점 예산을 jobProfile.evaluationWeights에서 동적 산출.
+ * 점수에 반영되지 않는 portfolio를 제외하고 4개 채점 카테고리로 재정규화하여
+ * 총 예산(~60점)을 보존한다. jobProfile 부재 시 정적 폴백.
+ */
+function getBaseDeductions(profile?: JobProfile): CategoryDeductions {
+  const w = profile?.evaluationWeights;
+  // 부분/malformed jobProfile 방어: 4개 가중치가 모두 유한수가 아니면 정적 폴백.
+  // (LLM 부분 응답으로 키가 누락되면 NaN이 matchScore까지 전파되는 것을 차단)
+  if (!w || ![w.coreSkills, w.experience, w.softSkills, w.certifications].every(Number.isFinite)) {
+    return { ...DEFAULT_BASE_DEDUCTIONS };
+  }
+
+  const scored = {
+    'hard-skill': w.coreSkills,
+    'experience': w.experience,
+    'soft-skill': w.softSkills,
+    'education': w.certifications,
+  };
+  const restSum = scored['hard-skill'] + scored['experience'] + scored['soft-skill'];
+  if (restSum <= 0) return { ...DEFAULT_BASE_DEDUCTIONS };
+
+  const BUDGET = 60;     // 정적 폴백 총합과 동일
+  const EDU_FLOOR = 4;   // certifications 가중치가 0인 직무에서도 필수 학력 미달이 0점이 되지 않도록 하한
+  const fullSum = restSum + scored['education'];
+  const education = Math.max(EDU_FLOOR, Math.round((scored['education'] / fullSum) * BUDGET));
+  const rest = BUDGET - education; // 나머지 3개가 나눠 가질 예산
+  const hardSkill = Math.round((scored['hard-skill'] / restSum) * rest);
+  const experience = Math.round((scored['experience'] / restSum) * rest);
+  return {
+    'hard-skill': hardSkill,
+    'experience': experience,
+    'soft-skill': Math.max(0, rest - hardSkill - experience), // 반올림 드리프트 흡수, 음수 방지
+    'education': education,
+  };
+}
 
 export function calculateScore(
   gapMap: GapMapItem[],
@@ -104,12 +152,8 @@ export function calculateScore(
     return 0.5 + 0.5 * (requiredCount / items.length); // 0.5 ~ 1.0
   };
 
-  const BASE_DEDUCTIONS = {
-    'hard-skill': 25,
-    'experience': 20,
-    'soft-skill': 10,
-    'education': 5,
-  } as const;
+  // 직무 프로파일 가중치 기반 동적 예산 (부재 시 정적 폴백)
+  const BASE_DEDUCTIONS = getBaseDeductions(instruction.jobProfile);
 
   const categories: Array<{ name: string; maxDeduction: number; key: keyof ScoringResult['breakdown'] }> = [
     { name: 'hard-skill', maxDeduction: Math.ceil(BASE_DEDUCTIONS['hard-skill'] * importanceWeight('hard-skill')), key: 'hardSkill' },

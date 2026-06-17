@@ -7,6 +7,7 @@ import {
   formatInstruction,
   buildSystemPrompt,
 } from "../../shared/prompt/promptBlocks";
+import { buildJobProfileContext, resolveJobProfile } from "../../core/research/industryDetect";
 import { formatCompanyContext } from '../../core/research/companyResearch';
 import { withRetry } from '../../shared/api/retry';
 import { validateResumeInput, validateJDInput, safeParseJSON } from '../../shared/lib/validation';
@@ -27,11 +28,13 @@ export async function generateInterviewQuestions(
 
   const today = new Date().toISOString().split('T')[0];
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
+  const profile = resolveJobProfile(instruction);
 
   const prompt = `[역할]
-당신은 한국 IT 기업의 면접관입니다. 이력서와 채용 공고를 분석하여 실전 모의 면접 질문을 생성해주세요.
+당신은 ${profile.jobFamily} 직무의 면접관(${profile.practitionerPersona})입니다. 이력서와 채용 공고를 분석하여 실전 모의 면접 질문을 생성해주세요.
+${buildJobProfileContext(profile)}
 ${companyBlock}
-이력서에 언급되지 않은 기술이나 경험을 질문에 포함하지 마십시오.
+이력서에 언급되지 않은 경험이나 역량을 질문에 포함하지 마십시오.
 
 [현재 날짜]
 ${today}
@@ -54,10 +57,12 @@ ${jobDescription}
 
 [임무]
 총 10개의 면접 질문을 생성하십시오:
-1. 기술 면접 (technical) 4개: JD의 Hard Skills를 검증하는 질문. 이력서의 기술 경험과 연결하십시오.
+1. 직무역량 면접 (technical) 4개: JD의 Hard Skills(이 직무의 핵심 실무 역량/지식)를 검증하는 질문. 이력서의 실무 경험과 연결하십시오.
 2. 인성 면접 (behavioral) 3개: JD의 Soft Skills와 업무 태도를 검증하는 질문. 이력서의 경험과 연결하십시오.
 3. 상황판단형 (technical) 2개: "~한 상황에서 어떻게 하시겠습니까?" 형태. 이력서의 경험을 기반으로 실무 판단력을 검증하십시오.
 4. 심화 질문 (technical) 1개: 이력서에서 가장 인상적인 프로젝트/성과에 대해 깊이 파고드는 질문.
+
+이 직무의 핵심 역량/지식 영역(직무역량 면접의 소재로 삼으십시오): ${profile.hardSkillTaxonomy.join(', ') || instruction.evaluationCriteria.hardSkills.join(', ')}
 
 ${HR_PERSPECTIVE_INTERVIEW}
 
@@ -74,10 +79,10 @@ ${HR_PERSPECTIVE_INTERVIEW}
 - Action: 수행한 구체적 행동과 기술을 설명하도록 안내
 - Result: 정량적 성과를 제시하도록 안내
 
-[Few-shot 예시]
-GOOD 기술 질문: "이력서에서 Redis 캐싱으로 API 응답시간을 단축했다고 하셨는데, 캐시 무효화 전략은 어떻게 설계하셨나요?" (이력서 내용 기반, 구체적, 심화)
-BAD 기술 질문: "Redis에 대해 설명해주세요" (너무 일반적, 이력서와 무관)
-GOOD 인성 질문: "이력서에서 코드 리뷰 프로세스를 제안했다고 하셨는데, 팀원 중 코드 리뷰에 부정적인 반응이 있었다면 어떻게 대처하셨나요?" (경험 기반 + 소프트스킬 검증)
+[Few-shot 예시 — 직무 무관 원칙]
+GOOD 직무역량 질문: 이력서에 적힌 구체적 성과/경험을 짚어 "어떻게/왜 그렇게 했는지"를 깊이 파고드는 질문 (이력서 내용 기반, 구체적, 심화)
+BAD 직무역량 질문: "○○에 대해 일반적으로 설명해주세요" (이력서와 무관, 너무 일반적)
+GOOD 인성 질문: 이력서에 드러난 협업/주도 경험을 짚어 갈등·난관 상황의 대처를 묻는 질문 (경험 기반 + 소프트스킬 검증)
 BAD 인성 질문: "팀워크에 대해 어떻게 생각하시나요?" (이력서와 무관, 범용적)
 
 [금지 사항]
@@ -157,8 +162,8 @@ export async function evaluateAnswer(
   const today = new Date().toISOString().split('T')[0];
 
   const prompt = `[역할]
-당신은 한국 IT 기업의 면접관입니다. 지원자의 면접 답변을 평가하고 피드백을 제공해주세요.
-이력서에 언급되지 않은 기술이나 경험을 질문에 포함하지 마십시오.
+당신은 한국 기업의 면접관입니다. 지원자의 면접 답변을 평가하고 피드백을 제공해주세요.
+이력서에 언급되지 않은 경험이나 역량을 임의로 가정하지 마십시오.
 
 [현재 날짜]
 ${today}

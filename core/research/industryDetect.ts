@@ -1,6 +1,11 @@
 /**
  * JD 업종 자동 감지 + 업종별 평가 가중치/키워드
+ *
+ * 참고: 정적 INDUSTRY_PROFILES는 이제 LLM 동적 JobProfile의 **폴백**으로만 쓰인다
+ * (LLM 생성 실패/구버전 결과 시). 주 경로는 jdAnalysis가 생성하는 JobProfile.
  */
+
+import type { JobProfile } from '../../types';
 
 export type Industry = 'it' | 'finance' | 'manufacturing' | 'public' | 'general';
 
@@ -119,4 +124,77 @@ export function buildIndustryContext(industry: Industry): string {
 [실무자 관점] ${profile.practitionerPerspective}
 
 이 업종의 평가 기준에 맞춰 분석과 코칭을 조정하십시오.`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 동적 JobProfile — 폴백 변환 + 프롬프트 컨텍스트
+// ─────────────────────────────────────────────────────────────
+
+/** 폴백용 업종별 실무자 직책 (LLM jobProfile 부재 시) */
+const PERSONA_TITLES: Record<Industry, string> = {
+  it: 'CTO',
+  finance: '리스크관리팀장',
+  manufacturing: '생산기술파트장',
+  public: 'NCS 면접관',
+  general: '팀장급 실무자',
+};
+
+/**
+ * 정적 IndustryProfile → JobProfile 변환 (폴백 전용).
+ * LLM이 jobProfile을 생성하지 못했을 때 detectedIndustry로부터 최소 프로파일 제공.
+ */
+export function industryProfileToJobProfile(industry: Industry): JobProfile {
+  const p = INDUSTRY_PROFILES[industry];
+  const w = p.evaluationWeights;
+  return {
+    jobFamily: p.label,
+    seniorityHint: '미상',
+    coreCompetencies: p.keyFocusAreas,
+    evaluationWeights: {
+      coreSkills: w.technicalSkills,
+      experience: w.experience,
+      certifications: w.certifications,
+      softSkills: w.softSkills,
+      portfolio: w.portfolio,
+    },
+    keyFocusAreas: p.keyFocusAreas,
+    hrPerspective: p.hrPerspective,
+    practitionerPersona: PERSONA_TITLES[industry],
+    practitionerPerspective: p.practitionerPerspective,
+    hardSkillTaxonomy: [],
+    narrativeStructure: '',
+    evidenceTypes: [],
+    learningResourceTypes: [],
+  };
+}
+
+/** instruction에서 JobProfile을 꺼내되, 없으면 detectedIndustry 기반 폴백 */
+export function resolveJobProfile(
+  instruction: { jobProfile?: JobProfile; detectedIndustry?: Industry },
+): JobProfile {
+  return instruction.jobProfile ?? industryProfileToJobProfile(instruction.detectedIndustry ?? 'general');
+}
+
+/** JobProfile → 프롬프트 컨텍스트 블록 (buildIndustryContext의 동적 대체) */
+export function buildJobProfileContext(profile: JobProfile): string {
+  const w = profile.evaluationWeights;
+  return `
+[직무 맞춤 분석 — ${profile.jobFamily}]
+요구 연차 수준: ${profile.seniorityHint}
+핵심 역량: ${profile.coreCompetencies.join(', ')}
+
+평가 가중치:
+- 핵심 실무역량: ${w.coreSkills}%
+- 경력/프로젝트: ${w.experience}%
+- 자격증/교육: ${w.certifications}%
+- 소프트스킬: ${w.softSkills}%
+- 포트폴리오/증빙: ${w.portfolio}%
+
+핵심 평가 영역: ${profile.keyFocusAreas.join(', ')}
+${profile.narrativeStructure ? `권장 서사 구조: ${profile.narrativeStructure}` : ''}
+
+[HR 관점] ${profile.hrPerspective}
+[실무자 관점 — ${profile.practitionerPersona}] ${profile.practitionerPerspective}
+
+이 직무의 평가 기준에 맞춰 분석과 코칭을 조정하십시오. 개발/IT 직군이 아니면 기술 용어를 강요하지 마십시오.`;
 }

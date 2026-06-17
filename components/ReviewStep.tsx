@@ -225,7 +225,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     );
   }, [result.actionItems]);
 
-  const hasGithubRepos = originalData.githubRepos.some(r => r.url.trim() !== '');
+  const hasEvidence =
+    originalData.githubRepos.some(r => r.url.trim() !== '') ||
+    (originalData.evidenceInputs?.length ?? 0) > 0 ||
+    ((result.evidenceBank?.repos.length ?? 0) > 0) ||
+    ((result.evidenceBank?.highlights.length ?? 0) > 0);
 
   const tabGroups: Array<{ key: string; label: string; tabs: Array<{ key: ReviewTab; label: string; icon: string }> }> = [
     { key: 'core', label: '핵심 분석', tabs: [
@@ -251,7 +255,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       { key: 'about-statement', label: '한줄소개', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
     ]},
     { key: 'utilities', label: '부가 기능', tabs: [
-      ...(hasGithubRepos ? [{ key: 'evidence' as ReviewTab, label: 'GitHub 근거', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' }] : []),
+      ...(hasEvidence ? [{ key: 'evidence' as ReviewTab, label: '보유 근거', icon: 'M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4' }] : []),
       { key: 'examples', label: '합격 사례', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
       { key: 'versions', label: '버전 관리', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     ]},
@@ -263,7 +267,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     const map: Record<string, string> = {};
     tabGroups.forEach(g => g.tabs.forEach(t => { map[t.key] = g.key; }));
     return map;
-  }, [hasGithubRepos]);
+  }, [hasEvidence]);
 
   const currentGroupTabs = tabGroups.find(g => g.key === activeGroup)?.tabs ?? [];
 

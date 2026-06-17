@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { resumeExamples, getExamplesByIndustry, exampleIndustries } from '../../data/examples';
 
 describe('resumeExamples', () => {
-  it('9개 사례가 존재한다', () => {
-    expect(resumeExamples).toHaveLength(9);
+  it('13개 사례가 존재한다', () => {
+    expect(resumeExamples).toHaveLength(13);
   });
 
   it('모든 사례에 필수 필드가 있다', () => {
@@ -41,13 +41,20 @@ describe('getExamplesByIndustry', () => {
     expect(getExamplesByIndustry('공공')).toHaveLength(2);
   });
 
+  it('비개발 직군(영업/마케팅/디자인/의료) 각 1건', () => {
+    expect(getExamplesByIndustry('영업')).toHaveLength(1);
+    expect(getExamplesByIndustry('마케팅')).toHaveLength(1);
+    expect(getExamplesByIndustry('디자인')).toHaveLength(1);
+    expect(getExamplesByIndustry('의료')).toHaveLength(1);
+  });
+
   it('존재하지 않는 업종은 빈 배열', () => {
     expect(getExamplesByIndustry('없는업종')).toHaveLength(0);
   });
 });
 
 describe('exampleIndustries', () => {
-  it('4개 업종이 정의됨', () => {
-    expect(exampleIndustries).toEqual(['IT', '금융', '제조', '공공']);
+  it('8개 업종이 정의됨 (개발 4 + 비개발 4)', () => {
+    expect(exampleIndustries).toEqual(['IT', '금융', '제조', '공공', '영업', '마케팅', '디자인', '의료']);
   });
 });

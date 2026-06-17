@@ -99,8 +99,8 @@ function buildContextBlock(
 export type ModelTier = "flash" | "pro" | "flash-lite";
 
 export const MODELS = {
-  flash: "gemini-3-flash-preview",
-  pro: "gemini-3-pro-preview",
+  flash: "gemini-3.5-flash",
+  pro: "gemini-3.1-pro-preview",
   flashLite: "gemini-2.5-flash-lite",
 } as const;
 

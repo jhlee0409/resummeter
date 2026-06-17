@@ -8,7 +8,7 @@ import { ReviewStep } from '../components/ReviewStep';
 import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from '../types';
 import { generateTailoredInstruction } from '../core/analysis/jdAnalysis';
 import { coachResume } from '../core/analysis/coaching';
-import { enrichEvidenceBank } from '../core/analysis/evidenceBank';
+import { enrichEvidenceBank, interpretEvidence, mergeEvidenceBank } from '../core/analysis/evidenceBank';
 import { track } from '../shared/lib/analytics';
 import { getCachedAnalysis, setCachedAnalysis, getCachedAnalysisByKey } from '../features/review/services/analysisCache';
 import { PreviousAnalysesPanel } from '../features/review/PreviousAnalysesPanel';
@@ -28,6 +28,7 @@ const App: React.FC = () => {
     jobTitle: '',
     githubRepos: [{ url: '', description: '' }],
     githubData: undefined,
+    evidenceInputs: [],
   });
 
   const [result, setResult] = useState<CoachingResult | null>(null);
@@ -78,6 +79,7 @@ const App: React.FC = () => {
       resumeLength: userData.resumeText.length,
       jdLength: userData.jobDescription.length,
       hasGithub: userData.githubRepos.some(r => r.url.trim() !== ''),
+      hasEvidence: (userData.evidenceInputs?.length ?? 0) > 0,
     });
     setCurrentStep(AppStep.ANALYSIS);
     setAnalysisStage('jd-analysis');
@@ -115,7 +117,8 @@ const App: React.FC = () => {
       // Stage 2 (coaching) + Stage 3 (evidence bank) 병렬 실행
       // evidenceBank는 instruction + githubData만 필요 → coaching과 독립적
       const successfulFetches = githubData?.filter(d => d.status === 'success') ?? [];
-      const [coachingResult, evidenceBank] = await Promise.all([
+      const evidenceInputs = userData.evidenceInputs ?? [];
+      const [coachingResult, evidenceBank, extraEvidences] = await Promise.all([
         coachResume({
           resumeText: userData.resumeText,
           jobDescription: userData.jobDescription,
@@ -129,10 +132,15 @@ const App: React.FC = () => {
         successfulFetches.length > 0
           ? enrichEvidenceBank(instruction, githubData!).catch(e => { console.warn("Evidence matching failed:", e); return null; })
           : Promise.resolve(null),
+        // 범용 증빙 (파일/텍스트/링크) 멀티모달 해석 — GitHub과 독립적
+        evidenceInputs.length > 0
+          ? interpretEvidence(instruction, evidenceInputs).catch(e => { console.warn("Evidence interpretation failed:", e); return []; })
+          : Promise.resolve([]),
       ]);
 
-      const emptyBank = !evidenceBank || (evidenceBank.repos.length === 0 && evidenceBank.highlights.length === 0);
-      const finalResult = emptyBank ? coachingResult : { ...coachingResult, evidenceBank: evidenceBank! };
+      // GitHub 근거 + 범용 증빙 해석 결과를 하나의 EvidenceBank로 병합 (병합 로직은 core/analysis)
+      const mergedBank = mergeEvidenceBank(evidenceBank, extraEvidences ?? []);
+      const finalResult = mergedBank ? { ...coachingResult, evidenceBank: mergedBank } : coachingResult;
 
       const scoring = calculateScore(finalResult.gapMap, instruction, userData.resumeText, userData.jobDescription, companyContext);
       const scoredResult = { ...finalResult, matchScore: scoring.matchScore, scoringResult: scoring };
@@ -158,7 +166,7 @@ const App: React.FC = () => {
     invalidateCache().catch(() => {});
     setResult(null);
     setAnalysisStage('jd-analysis');
-    setUserData({ resumeText: '', jobDescription: '', companyName: '', jobTitle: '', githubRepos: [{ url: '', description: '' }], githubData: undefined });
+    setUserData({ resumeText: '', jobDescription: '', companyName: '', jobTitle: '', githubRepos: [{ url: '', description: '' }], githubData: undefined, evidenceInputs: [] });
     setCurrentStep(AppStep.UPLOAD);
   };
 
