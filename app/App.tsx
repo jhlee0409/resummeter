@@ -79,6 +79,7 @@ const App: React.FC = () => {
       resumeLength: userData.resumeText.length,
       jdLength: userData.jobDescription.length,
       hasGithub: userData.githubRepos.some(r => r.url.trim() !== ''),
+      hasEvidence: (userData.evidenceInputs?.length ?? 0) > 0,
     });
     setCurrentStep(AppStep.ANALYSIS);
     setAnalysisStage('jd-analysis');

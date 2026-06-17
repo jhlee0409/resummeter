@@ -5,7 +5,7 @@
  */
 
 export type AnalyticsEvent =
-  | { type: 'analysis_start'; resumeLength: number; jdLength: number; hasGithub: boolean }
+  | { type: 'analysis_start'; resumeLength: number; jdLength: number; hasGithub: boolean; hasEvidence?: boolean }
   | { type: 'analysis_complete'; matchScore: number; durationMs: number }
   | { type: 'tab_switch'; from: string; to: string }
   | { type: 'coaching_apply'; actionId: string; accepted: boolean }
