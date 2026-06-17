@@ -13,7 +13,7 @@ interface ScoreDashboardProps {
 
 const BREAKDOWN_LABELS: Record<string, string> = {
   hardRequirement: '필수 요건',
-  hardSkill: '기술 스택',
+  hardSkill: '핵심 역량',
   experience: '경력/경험',
   softSkill: '소프트 스킬',
   domain: '도메인 키워드',
@@ -59,20 +59,20 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, original
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        {/* Match Score + Level */}
-        <div className="glass-card p-5 rounded-2xl flex items-center gap-4">
-          <div className={`w-14 h-14 rounded-2xl ${scoreConfig.bg} flex items-center justify-center`}>
-            <span className={`text-2xl font-black ${scoreConfig.text} section-num`}>{displayScore}</span>
+        {/* Match Score + Level — 화면의 1순위 결론이므로 액센트 강조 */}
+        <div className="glass-card p-5 rounded-2xl flex items-center gap-4 border border-brand-500/25 shadow-lg shadow-brand-500/5">
+          <div className={`w-16 h-16 rounded-2xl ${scoreConfig.bg} flex items-center justify-center shrink-0`}>
+            <span className={`text-3xl font-black ${scoreConfig.text} section-num`}>{displayScore}</span>
           </div>
           <div>
-            <p className="text-[11px] text-zinc-500 font-medium">직무 적합도</p>
-            <p className={`text-sm font-bold ${scoreConfig.text}`}>{scoreConfig.label}</p>
+            <p className="text-[11px] text-zinc-400 font-medium">직무 적합도</p>
+            <p className={`text-base font-bold ${scoreConfig.text}`}>{scoreConfig.label}</p>
           </div>
         </div>
 
         {/* Gap Summary */}
         <div className="glass-card p-5 rounded-2xl">
-          <p className="text-[11px] text-zinc-500 font-medium mb-2.5">요구사항 분석</p>
+          <p className="text-[11px] text-zinc-400 font-medium mb-2.5">요구사항 분석</p>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
@@ -94,16 +94,16 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, original
 
         {/* Action Items */}
         <div className="glass-card p-5 rounded-2xl">
-          <p className="text-[11px] text-zinc-500 font-medium">코칭 제안</p>
+          <p className="text-[11px] text-zinc-400 font-medium">코칭 제안</p>
           <p className="text-sm font-bold text-brand-400">{actionCount}개 액션 아이템</p>
           <p className="text-[10px] text-zinc-500 mt-0.5">{insightCount}개 인사이트</p>
         </div>
 
-        {/* ATS Score */}
-        <div className="glass-card p-5 rounded-2xl">
+        {/* ATS Score — 미산출 시 의도된 비활성임을 흐리게 표현 */}
+        <div className={`glass-card p-5 rounded-2xl ${atsScore == null && !isLoadingAts ? 'opacity-60' : ''}`}>
           {atsScore != null ? (
             <div>
-              <p className="text-[11px] text-zinc-500 font-medium">ATS 점수</p>
+              <p className="text-[11px] text-zinc-400 font-medium">ATS 점수</p>
               <div className="flex items-center gap-2 mt-1">
                 {prevAtsScore != null && prevAtsScore !== atsScore && (
                   <>
@@ -123,8 +123,8 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, original
             </div>
           ) : (
             <div>
-              <p className="text-[11px] text-zinc-500 font-medium">ATS 점수</p>
-              <p className="text-xs text-zinc-600 mt-1">분석 대기중</p>
+              <p className="text-[11px] text-zinc-400 font-medium">ATS 점수</p>
+              <p className="text-xs text-zinc-500 mt-1">상세 점수 탭에서 측정</p>
             </div>
           )}
         </div>
@@ -134,7 +134,7 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, original
       {scoring && scoring.level !== 'data_insufficient' && (
         <div className="glass-card p-5 rounded-2xl">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-[11px] text-zinc-500 font-medium">감점 내역</p>
+            <p className="text-[11px] text-zinc-400 font-medium">감점 내역</p>
             {scoring.penalties.length > 0 && (
               <button
                 onClick={() => setShowPenalties(!showPenalties)}
