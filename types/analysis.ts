@@ -32,8 +32,11 @@ export interface JdRequirement {
   keywords: string[];
 }
 
+/** 증빙 출처 유형. github은 link 증빙의 한 종류, document/portfolio는 업로드 파일. */
+export type EvidenceType = 'jd' | 'github' | 'best-practice' | 'document' | 'portfolio' | 'link';
+
 export interface Evidence {
-  type: 'jd' | 'github' | 'best-practice';
+  type: EvidenceType;
   content: string;
   source?: string;
   confidence: 'verified' | 'inferred';

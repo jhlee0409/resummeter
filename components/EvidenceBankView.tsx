@@ -9,7 +9,11 @@ const evidenceTypeConfig: Record<string, { label: string; bg: string; text: stri
   'jd': { label: 'JD', bg: 'bg-blue-500/10', text: 'text-blue-400' },
   'github': { label: 'GitHub', bg: 'bg-emerald-500/10', text: 'text-emerald-400' },
   'best-practice': { label: 'Best Practice', bg: 'bg-purple-500/10', text: 'text-purple-400' },
+  'portfolio': { label: '포트폴리오', bg: 'bg-amber-500/10', text: 'text-amber-400' },
+  'document': { label: '문서', bg: 'bg-cyan-500/10', text: 'text-cyan-400' },
+  'link': { label: '링크', bg: 'bg-indigo-500/10', text: 'text-indigo-400' },
 };
+const evidenceFallback = { label: '근거', bg: 'bg-zinc-500/10', text: 'text-zinc-400' };
 
 export const EvidenceBankView: React.FC<EvidenceBankViewProps> = ({ evidenceBank }) => {
   if (!evidenceBank || (evidenceBank.repos.length === 0 && evidenceBank.highlights.length === 0)) {
@@ -20,8 +24,8 @@ export const EvidenceBankView: React.FC<EvidenceBankViewProps> = ({ evidenceBank
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
           </svg>
         </div>
-        <p className="text-sm font-semibold text-zinc-500">GitHub 데이터가 없습니다</p>
-        <p className="text-[12px] text-zinc-600 mt-1">GitHub 레포를 추가하면 JD 연관 근거를 자동 매칭합니다</p>
+        <p className="text-sm font-semibold text-zinc-500">근거 자료가 없습니다</p>
+        <p className="text-[12px] text-zinc-600 mt-1">추가 자료(포트폴리오·실적·GitHub 등)를 첨부하면 JD 연관 근거를 자동 매칭합니다</p>
       </div>
     );
   }
@@ -61,7 +65,7 @@ export const EvidenceBankView: React.FC<EvidenceBankViewProps> = ({ evidenceBank
           {repo.evidences.length > 0 && (
             <div className="px-4 py-3 space-y-2">
               {repo.evidences.map((ev, i) => {
-                const config = evidenceTypeConfig[ev.type] || evidenceTypeConfig['github'];
+                const config = evidenceTypeConfig[ev.type] || evidenceFallback;
                 return (
                   <div key={i} className="flex items-start gap-2 text-[11px]">
                     <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${config.bg} ${config.text}`}>
@@ -85,7 +89,7 @@ export const EvidenceBankView: React.FC<EvidenceBankViewProps> = ({ evidenceBank
           <h4 className="text-[12px] font-bold uppercase tracking-wider text-zinc-500 mb-3">주요 하이라이트</h4>
           <div className="space-y-2">
             {evidenceBank.highlights.map((ev, i) => {
-              const config = evidenceTypeConfig[ev.type] || evidenceTypeConfig['github'];
+              const config = evidenceTypeConfig[ev.type] || evidenceFallback;
               return (
                 <div key={i} className="glass-card rounded-lg px-3 py-2.5 flex items-start gap-2">
                   <span className={`shrink-0 px-1.5 py-0.5 rounded-full text-[9px] font-medium ${config.bg} ${config.text}`}>
