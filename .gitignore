@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# env (서버 키 — 절대 커밋 금지). 예제만 추적
+.env
+.env.*
+!.env.example
+
+# vercel
+.vercel
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

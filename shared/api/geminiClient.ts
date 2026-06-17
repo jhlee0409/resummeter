@@ -15,7 +15,6 @@
 // 실패 시 자동으로 인라인 폴백합니다.
 // ─────────────────────────────────────────────────────────────
 
-import { GoogleGenAI } from "@google/genai";
 import type { TailoredInstructionWithRequirements, GithubRepo } from "../../types";
 import {
   SECURITY_RULE,
@@ -24,19 +23,44 @@ import {
   formatInstruction,
 } from "../prompt/promptBlocks";
 
-// ── 싱글톤 AI 인스턴스 (geminiService.ts와 공유) ─────────────
-let _ai: GoogleGenAI | null = null;
-export function getAI(): GoogleGenAI {
-  if (!_ai) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error(
-        "GEMINI_API_KEY가 설정되지 않았습니다. .env.local 파일을 확인해주세요."
-      );
-    }
-    _ai = new GoogleGenAI({ apiKey });
+// ── Gemini 프록시 클라이언트 ─────────────────────────────────
+// 키는 서버(/api/gemini)에만 존재. 클라이언트는 동일 인터페이스 shim을 통해
+// 모든 호출을 서버사이드로 위임한다 (브라우저 번들에 키 노출 없음).
+export interface ProxyGenerateResponse {
+  text: string;
+  // grounding metadata 등 SDK 응답 구조를 그대로 통과 → 소비처 호환 위해 any[]
+  candidates?: any[];
+}
+
+async function callProxy(kind: string, payload: unknown): Promise<any> {
+  const res = await fetch("/api/gemini", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ kind, payload }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    // retry.ts/classifyError가 메시지 문자열로 판별(429/timeout 등) → 상태코드 포함해 throw
+    const message = (data as { error?: { message?: string } })?.error?.message || "Gemini 요청 실패";
+    throw new Error(`${res.status} ${message}`);
   }
-  return _ai;
+  return data;
+}
+
+/** GoogleGenAI와 동일한 호출 형태를 유지하는 프록시 shim */
+export function getAI() {
+  return {
+    models: {
+      generateContent: (params: unknown): Promise<ProxyGenerateResponse> =>
+        callProxy("generate", params),
+    },
+    caches: {
+      create: (params: unknown): Promise<{ name: string | null }> =>
+        callProxy("cacheCreate", params),
+      delete: (params: { name: string }): Promise<{ ok: boolean }> =>
+        callProxy("cacheDelete", params),
+    },
+  };
 }
 
 // ── 캐시 상태 ────────────────────────────────────────────────
