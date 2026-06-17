@@ -26,6 +26,46 @@ export const DEFAULT_INSTRUCTION: TailoredInstructionWithRequirements = {
 };
 
 // ─────────────────────────────────────────────────────────────
+// JobProfile responseSchema — 동적 직무 프로파일 (모든 직무 범용)
+// ─────────────────────────────────────────────────────────────
+
+const JOB_PROFILE_SCHEMA = {
+  type: Type.OBJECT,
+  description: "이 JD가 가리키는 직무의 평가 프로파일. 개발/IT가 아니면 기술 스택·코딩·GitHub 등 개발 전용 개념을 끌어오지 마십시오.",
+  properties: {
+    jobFamily: { type: Type.STRING, description: "직무군. 예: '프로덕트 디자인', 'B2B 영업', '병동 간호'. 직무에 맞게 자유 생성." },
+    seniorityHint: { type: Type.STRING, description: "요구 연차 수준: '신입' | '주니어' | '미들' | '시니어' | '리드' 중 하나" },
+    coreCompetencies: { type: Type.ARRAY, items: { type: Type.STRING }, description: "이 직무의 핵심 역량 4~6개" },
+    evaluationWeights: {
+      type: Type.OBJECT,
+      description: "평가 가중치. 5개 항목 합이 반드시 정확히 100.",
+      properties: {
+        coreSkills: { type: Type.NUMBER, description: "직무 핵심 실무역량" },
+        experience: { type: Type.NUMBER, description: "경력/프로젝트" },
+        certifications: { type: Type.NUMBER, description: "자격증/교육" },
+        softSkills: { type: Type.NUMBER, description: "소프트스킬" },
+        portfolio: { type: Type.NUMBER, description: "포트폴리오/증빙물" },
+      },
+      required: ["coreSkills", "experience", "certifications", "softSkills", "portfolio"],
+    },
+    keyFocusAreas: { type: Type.ARRAY, items: { type: Type.STRING }, description: "채용 시 핵심 평가 영역 3~5개" },
+    hrPerspective: { type: Type.STRING, description: "이 직무 HR 담당자의 서류 평가 관점 (2~3문장)" },
+    practitionerPersona: { type: Type.STRING, description: "실무 면접관 직책. 예: '디자인 리드', '영업팀장', '수간호사'. 개발 아니면 CTO 금지." },
+    practitionerPerspective: { type: Type.STRING, description: "실무 면접관이 중시하는 관점 (2~3문장)" },
+    hardSkillTaxonomy: { type: Type.ARRAY, items: { type: Type.STRING }, description: "hard-skill 면접 질문 소재가 될 역량/도구/지식 4~8개" },
+    narrativeStructure: { type: Type.STRING, description: "이 직무 경험 서술에 적합한 서사 구조. 개발 프로젝트 전제 금지. 예: 영업='고객니즈→솔루션제시→계약→관계유지'" },
+    evidenceTypes: { type: Type.ARRAY, items: { type: Type.STRING }, description: "이 직무에서 의미있는 증빙 자료 종류. 예: 디자이너='포트폴리오 사이트', 영업='실적표, 수상이력'" },
+    learningResourceTypes: { type: Type.ARRAY, items: { type: Type.STRING }, description: "역량 향상 학습 자원 종류. 인프런/Udemy에 국한하지 말 것." },
+  },
+  required: [
+    "jobFamily", "seniorityHint", "coreCompetencies", "evaluationWeights",
+    "keyFocusAreas", "hrPerspective", "practitionerPersona",
+    "practitionerPerspective", "hardSkillTaxonomy", "narrativeStructure",
+    "evidenceTypes", "learningResourceTypes",
+  ],
+} as const;
+
+// ─────────────────────────────────────────────────────────────
 // Stage 1: JD 분석 (Flash) — Schema description 강화
 // ─────────────────────────────────────────────────────────────
 
@@ -36,10 +76,9 @@ export async function generateTailoredInstruction(
 ): Promise<TailoredInstructionWithRequirements> {
   validateJDInput(jobDescription);
 
-  // 업종 자동 감지
-  const { detectIndustry, buildIndustryContext } = await import('../research/industryDetect');
+  // 업종 자동 감지 — jobProfile 폴백용으로만 사용 (LLM 생성 실패 시)
+  const { detectIndustry } = await import('../research/industryDetect');
   const detectedIndustry = detectIndustry(jobDescription);
-  const industryContext = buildIndustryContext(detectedIndustry);
 
   const companyLine = companyName ? `\n    [지원 회사] ${companyName}` : '';
   const jobTitleLine = jobTitle ? `\n    [지원 직무] ${jobTitle}` : '';
@@ -58,8 +97,9 @@ export async function generateTailoredInstruction(
     </user-jd>
 
     [지시사항]
+    0. **직무 프로파일(jobProfile) 생성**: 이 JD가 어떤 직무인지 먼저 파악하고, 그 직무에 맞는 평가 프로파일을 생성하십시오. 개발/IT 직군이 아니면 기술 스택·코딩·GitHub 같은 개발 전용 개념을 끌어오지 마십시오. evaluationWeights 5개 항목의 합은 반드시 정확히 100이어야 합니다.
     1. **페르소나 정의**: 이 직무의 채용 담당자가 가질 법한 구체적인 성향과 배경을 정의하십시오.
-    2. **핵심 평가 기준**: JD에서 요구하는 기술 스택(Hard Skills)과 업무 태도(Soft Skills), 우대 사항을 바탕으로 이력서에서 반드시 드러내야 할 키워드와 경험을 나열하십시오.
+    2. **핵심 평가 기준**: JD에서 요구하는 핵심 실무 역량(Hard Skills — 직무에 따라 기술/도구/전문지식)과 업무 태도(Soft Skills), 우대 사항을 바탕으로 이력서에서 반드시 드러내야 할 키워드와 경험을 나열하십시오.
     3. **수정 가이드라인 (한국 정서 반영)**: 한국의 기업 문화를 고려하여 이력서의 어조와 서술 방식을 지시하십시오.
     4. **출력 결과 형식**: JSON 형식으로 구조화된 분석 결과를 반환하십시오.
     5. **JD 요구사항 구조화**: 채용공고의 각 요구사항을 개별 항목으로 분리.
@@ -132,8 +172,9 @@ export async function generateTailoredInstruction(
                 required: ["text", "category", "importance", "keywords"],
               },
             },
+            jobProfile: JOB_PROFILE_SCHEMA,
           },
-          required: ["persona", "keywords", "keywordAliases", "evaluationCriteria", "toneGuide", "jdRequirements"],
+          required: ["persona", "keywords", "keywordAliases", "evaluationCriteria", "toneGuide", "jdRequirements", "jobProfile"],
         },
       },
     }));

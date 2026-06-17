@@ -63,8 +63,8 @@ export async function analyzeResume(
 
   const repoInfo = formatRepoInfo(githubRepos, githubData);
   const today = new Date().toISOString().split('T')[0];
-  const { buildIndustryContext } = await import('../research/industryDetect');
-  const industryContext = instruction.detectedIndustry ? buildIndustryContext(instruction.detectedIndustry) : '';
+  const { buildJobProfileContext, resolveJobProfile } = await import('../research/industryDetect');
+  const industryContext = buildJobProfileContext(resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry));
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   // 캐시 히트 시 context(이력서/JD/instruction/repos)는 캐시에서 로드됨 → prompt에서 제외

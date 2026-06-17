@@ -10,8 +10,46 @@ import type {
   FitLevel,
   Penalty,
   CompanyContext,
+  JobProfile,
 } from '../../types';
 import { parseJDRequirements, parseResumeExperience } from './requirementParser';
+
+/** 균형 프로파일 기준 카테고리 감점 예산 (jobProfile 부재 시 폴백, 합 60) */
+const DEFAULT_BASE_DEDUCTIONS = {
+  'hard-skill': 25,
+  'experience': 20,
+  'soft-skill': 10,
+  'education': 5,
+} as const;
+
+type CategoryDeductions = Record<'hard-skill' | 'experience' | 'soft-skill' | 'education', number>;
+
+/**
+ * 카테고리별 감점 예산을 jobProfile.evaluationWeights에서 동적 산출.
+ * 점수에 반영되지 않는 portfolio를 제외하고 4개 채점 카테고리로 재정규화하여
+ * 총 예산(~60점)을 보존한다. jobProfile 부재 시 정적 폴백.
+ */
+function getBaseDeductions(profile?: JobProfile): CategoryDeductions {
+  const w = profile?.evaluationWeights;
+  if (!w) return { ...DEFAULT_BASE_DEDUCTIONS };
+
+  const scored = {
+    'hard-skill': w.coreSkills,
+    'experience': w.experience,
+    'soft-skill': w.softSkills,
+    'education': w.certifications,
+  };
+  const sum = scored['hard-skill'] + scored['experience'] + scored['soft-skill'] + scored['education'];
+  if (sum <= 0) return { ...DEFAULT_BASE_DEDUCTIONS };
+
+  const BUDGET = 60; // 정적 폴백의 총합과 동일하게 유지
+  return {
+    'hard-skill': Math.round((scored['hard-skill'] / sum) * BUDGET),
+    'experience': Math.round((scored['experience'] / sum) * BUDGET),
+    'soft-skill': Math.round((scored['soft-skill'] / sum) * BUDGET),
+    'education': Math.round((scored['education'] / sum) * BUDGET),
+  };
+}
 
 export function calculateScore(
   gapMap: GapMapItem[],
@@ -104,12 +142,8 @@ export function calculateScore(
     return 0.5 + 0.5 * (requiredCount / items.length); // 0.5 ~ 1.0
   };
 
-  const BASE_DEDUCTIONS = {
-    'hard-skill': 25,
-    'experience': 20,
-    'soft-skill': 10,
-    'education': 5,
-  } as const;
+  // 직무 프로파일 가중치 기반 동적 예산 (부재 시 정적 폴백)
+  const BASE_DEDUCTIONS = getBaseDeductions(instruction.jobProfile);
 
   const categories: Array<{ name: string; maxDeduction: number; key: keyof ScoringResult['breakdown'] }> = [
     { name: 'hard-skill', maxDeduction: Math.ceil(BASE_DEDUCTIONS['hard-skill'] * importanceWeight('hard-skill')), key: 'hardSkill' },
