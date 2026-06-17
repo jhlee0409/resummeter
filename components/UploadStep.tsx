@@ -143,7 +143,7 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
     const added: EvidenceInput[] = [];
     for (const file of Array.from(files)) {
       if (!isSupportedEvidenceFile(file)) { setEvidenceError(`${file.name}: 지원하지 않는 형식입니다 (PDF/PNG/JPG/WEBP)`); continue; }
-      if (file.size > MAX_EVIDENCE_FILE_SIZE) { setEvidenceError(`${file.name}: 파일이 너무 큽니다 (최대 10MB)`); continue; }
+      if (file.size > MAX_EVIDENCE_FILE_SIZE) { setEvidenceError(`${file.name}: 파일이 너무 큽니다 (최대 3MB)`); continue; }
       const { mimeType, dataBase64 } = await fileToBase64(file);
       added.push({ id: `f-${Date.now()}-${added.length}-${file.name}`, kind: 'file', label: file.name, fileName: file.name, mimeType, dataBase64 });
     }
@@ -738,7 +738,7 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
             <span className="text-sm text-zinc-300 font-medium">파일 첨부</span>
-            <span className="block text-[11px] text-zinc-600 mt-0.5">PDF · PNG · JPG · WEBP (최대 10MB)</span>
+            <span className="block text-[11px] text-zinc-500 mt-0.5">PDF · PNG · JPG · WEBP (최대 3MB)</span>
           </button>
 
           {evidenceError && (

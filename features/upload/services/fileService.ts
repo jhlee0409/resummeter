@@ -3,7 +3,9 @@
  * PDF/이미지를 원본 그대로 모델에 넘겨 레이아웃/도표/이미지까지 해석.
  */
 
-export const MAX_EVIDENCE_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+// 서버 프록시(Vercel) 요청 본문 한도(~4.5MB)를 고려한 상한.
+// base64 인코딩 시 약 1.34배 → 3MB 원본 ≈ 4MB base64로 안전.
+export const MAX_EVIDENCE_FILE_SIZE = 3 * 1024 * 1024; // 3MB
 export const SUPPORTED_EVIDENCE_MIME = [
   'application/pdf',
   'image/png',
