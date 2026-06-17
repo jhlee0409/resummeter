@@ -423,7 +423,20 @@ JSON 스키마에 맞춰 반환하세요.
     }));
 
     const jsonText = response.text;
-    return safeParseJSON<DetailedScore>(jsonText, '상세 점수 분석');
+    const parsed = safeParseJSON<DetailedScore>(jsonText, '상세 점수 분석');
+    // LLM이 동적으로 정한 섹션 가중치 합이 1.0이 아닐 수 있음 → 정규화하여
+    // UI 표시(weight*100%)와 overall 계산 기준을 일관되게 맞춤
+    const b = parsed.breakdown;
+    if (b?.coreSkills && b.experience && b.impact && b.readability) {
+      const total = b.coreSkills.weight + b.experience.weight + b.impact.weight + b.readability.weight;
+      if (total > 0 && Math.abs(total - 1) > 0.001) {
+        b.coreSkills.weight /= total;
+        b.experience.weight /= total;
+        b.impact.weight /= total;
+        b.readability.weight /= total;
+      }
+    }
+    return parsed;
   } catch (error) {
     console.error("상세 점수 분석 중 오류 발생:", error);
     throw classifyError(error);

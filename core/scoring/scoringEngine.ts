@@ -31,7 +31,11 @@ type CategoryDeductions = Record<'hard-skill' | 'experience' | 'soft-skill' | 'e
  */
 function getBaseDeductions(profile?: JobProfile): CategoryDeductions {
   const w = profile?.evaluationWeights;
-  if (!w) return { ...DEFAULT_BASE_DEDUCTIONS };
+  // 부분/malformed jobProfile 방어: 4개 가중치가 모두 유한수가 아니면 정적 폴백.
+  // (LLM 부분 응답으로 키가 누락되면 NaN이 matchScore까지 전파되는 것을 차단)
+  if (!w || ![w.coreSkills, w.experience, w.softSkills, w.certifications].every(Number.isFinite)) {
+    return { ...DEFAULT_BASE_DEDUCTIONS };
+  }
 
   const scored = {
     'hard-skill': w.coreSkills,
@@ -39,15 +43,21 @@ function getBaseDeductions(profile?: JobProfile): CategoryDeductions {
     'soft-skill': w.softSkills,
     'education': w.certifications,
   };
-  const sum = scored['hard-skill'] + scored['experience'] + scored['soft-skill'] + scored['education'];
-  if (sum <= 0) return { ...DEFAULT_BASE_DEDUCTIONS };
+  const restSum = scored['hard-skill'] + scored['experience'] + scored['soft-skill'];
+  if (restSum <= 0) return { ...DEFAULT_BASE_DEDUCTIONS };
 
-  const BUDGET = 60; // 정적 폴백의 총합과 동일하게 유지
+  const BUDGET = 60;     // 정적 폴백 총합과 동일
+  const EDU_FLOOR = 4;   // certifications 가중치가 0인 직무에서도 필수 학력 미달이 0점이 되지 않도록 하한
+  const fullSum = restSum + scored['education'];
+  const education = Math.max(EDU_FLOOR, Math.round((scored['education'] / fullSum) * BUDGET));
+  const rest = BUDGET - education; // 나머지 3개가 나눠 가질 예산
+  const hardSkill = Math.round((scored['hard-skill'] / restSum) * rest);
+  const experience = Math.round((scored['experience'] / restSum) * rest);
   return {
-    'hard-skill': Math.round((scored['hard-skill'] / sum) * BUDGET),
-    'experience': Math.round((scored['experience'] / sum) * BUDGET),
-    'soft-skill': Math.round((scored['soft-skill'] / sum) * BUDGET),
-    'education': Math.round((scored['education'] / sum) * BUDGET),
+    'hard-skill': hardSkill,
+    'experience': experience,
+    'soft-skill': Math.max(0, rest - hardSkill - experience), // 반올림 드리프트 흡수, 음수 방지
+    'education': education,
   };
 }
 

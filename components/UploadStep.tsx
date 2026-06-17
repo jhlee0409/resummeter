@@ -153,8 +153,14 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
   const addEvidenceNote = () => {
     onChange('evidenceInputs', [...evidenceInputs, { id: `t-${Date.now()}`, kind: 'text', label: '메모', text: '' }]);
   };
+  const addEvidenceLink = () => {
+    onChange('evidenceInputs', [...evidenceInputs, { id: `l-${Date.now()}`, kind: 'link', label: '링크', url: '', text: '' }]);
+  };
   const updateEvidenceText = (id: string, text: string) => {
     onChange('evidenceInputs', evidenceInputs.map(e => e.id === id ? { ...e, text } : e));
+  };
+  const updateEvidenceUrl = (id: string, url: string) => {
+    onChange('evidenceInputs', evidenceInputs.map(e => e.id === id ? { ...e, url } : e));
   };
   const removeEvidenceInput = (id: string) => {
     onChange('evidenceInputs', evidenceInputs.filter(e => e.id !== id));
@@ -752,14 +758,24 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                 )}
               </div>
-              <div className="flex-1 min-w-0">
-                {ev.kind === 'file' ? (
+              <div className="flex-1 min-w-0 space-y-1.5">
+                {ev.kind === 'file' && (
                   <p className="text-sm text-zinc-200 truncate">{ev.fileName}</p>
-                ) : (
+                )}
+                {ev.kind === 'link' && (
+                  <input
+                    type="url"
+                    className="w-full text-sm px-2.5 py-1.5 border border-zinc-700/50 rounded-lg bg-dark-800/50 text-zinc-200 placeholder-zinc-600 outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500/40"
+                    placeholder="https://… (포트폴리오·발행물·프로필 등)"
+                    value={ev.url ?? ''}
+                    onChange={(e) => updateEvidenceUrl(ev.id, e.target.value)}
+                  />
+                )}
+                {(ev.kind === 'text' || ev.kind === 'link') && (
                   <textarea
                     rows={2}
                     className="w-full text-sm px-2.5 py-1.5 border border-zinc-700/50 rounded-lg bg-dark-800/50 text-zinc-200 placeholder-zinc-600 outline-none focus:ring-2 focus:ring-brand-500/10 focus:border-brand-500/40 resize-none"
-                    placeholder="실적·수상·자격 등 증빙이 될 내용을 적어주세요 (예: 2025 영업왕 수상, 신규 고객 35곳 발굴)"
+                    placeholder={ev.kind === 'link' ? '이 링크가 무엇인지 설명해주세요 (예: 디자인 포트폴리오, 기고문)' : '실적·수상·자격 등 증빙이 될 내용을 적어주세요 (예: 2025 영업왕 수상, 신규 고객 35곳 발굴)'}
                     value={ev.text ?? ''}
                     onChange={(e) => updateEvidenceText(ev.id, e.target.value)}
                   />
@@ -774,13 +790,22 @@ export const UploadStep: React.FC<UploadStepProps> = ({ data, onChange, onNext, 
             </div>
           ))}
 
-          <button
-            onClick={addEvidenceNote}
-            className="flex items-center gap-1.5 text-sm text-brand-400 font-semibold hover:text-brand-300 transition-colors mt-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-            텍스트 메모 추가
-          </button>
+          <div className="flex items-center gap-4 mt-1">
+            <button
+              onClick={addEvidenceNote}
+              className="flex items-center gap-1.5 text-sm text-brand-400 font-semibold hover:text-brand-300 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
+              텍스트 메모 추가
+            </button>
+            <button
+              onClick={addEvidenceLink}
+              className="flex items-center gap-1.5 text-sm text-brand-400 font-semibold hover:text-brand-300 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" /></svg>
+              링크 추가
+            </button>
+          </div>
         </div>}
       </section>
 
