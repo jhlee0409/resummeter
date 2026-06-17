@@ -30,7 +30,7 @@ export async function analyzeLearningRoadmap(
   const gaps = gapMap.filter((item) => item.currentLevel === "missing" || item.currentLevel === "weak");
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
-  const profile = resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry);
+  const profile = resolveJobProfile(instruction);
 
   const prompt = `
 당신은 ${profile.jobFamily} 직무의 커리어 코칭 전문가입니다.

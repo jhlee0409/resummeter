@@ -25,7 +25,7 @@ export async function generatePractitionerReview(
 ): Promise<PractitionerReview> {
   validateResumeInput(resumeText);
 
-  const profile = resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry);
+  const profile = resolveJobProfile(instruction);
   const personaTitle = profile.practitionerPersona;
   const w = profile.evaluationWeights;
 

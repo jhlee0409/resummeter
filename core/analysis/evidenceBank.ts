@@ -139,7 +139,7 @@ export async function interpretEvidence(
   );
   if (inputs.length === 0) return [];
 
-  const profile = resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry);
+  const profile = resolveJobProfile(instruction);
 
   const header = `당신은 채용 증빙 자료 해석 전문가입니다.
 첨부된 자료를 분석하여, "${profile.jobFamily}" 직무 지원자의 역량을 보여주는 증빙을 구조화하여 추출하십시오.
@@ -221,4 +221,18 @@ ${instruction.jdRequirements.map(r => `- [${r.category}] ${r.text}`).join('\n')}
     console.warn("Evidence interpretation failed:", classifyError(e));
     return [];
   }
+}
+
+/**
+ * GitHub 근거(EvidenceBank) + 범용 증빙 해석(Evidence[])을 하나의 EvidenceBank로 병합.
+ * 둘 다 비어 결과가 없으면 null. EvidenceBank의 구조 지식을 producer 옆에 둠.
+ */
+export function mergeEvidenceBank(
+  bank: EvidenceBank | null | undefined,
+  extra: Evidence[],
+): EvidenceBank | null {
+  const highlights = [...(bank?.highlights ?? []), ...(extra ?? [])];
+  const repos = bank?.repos ?? [];
+  if (repos.length === 0 && highlights.length === 0) return null;
+  return { repos, techStack: bank?.techStack ?? {}, highlights };
 }

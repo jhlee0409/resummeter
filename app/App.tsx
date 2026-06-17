@@ -8,7 +8,7 @@ import { ReviewStep } from '../components/ReviewStep';
 import { AppStep, UserInputData, CoachingResult, GitHubFetchResult, TailoredInstructionWithRequirements } from '../types';
 import { generateTailoredInstruction } from '../core/analysis/jdAnalysis';
 import { coachResume } from '../core/analysis/coaching';
-import { enrichEvidenceBank, interpretEvidence } from '../core/analysis/evidenceBank';
+import { enrichEvidenceBank, interpretEvidence, mergeEvidenceBank } from '../core/analysis/evidenceBank';
 import { track } from '../shared/lib/analytics';
 import { getCachedAnalysis, setCachedAnalysis, getCachedAnalysisByKey } from '../features/review/services/analysisCache';
 import { PreviousAnalysesPanel } from '../features/review/PreviousAnalysesPanel';
@@ -138,17 +138,9 @@ const App: React.FC = () => {
           : Promise.resolve([]),
       ]);
 
-      // GitHub 근거 + 범용 증빙 해석 결과를 하나의 EvidenceBank로 병합
-      const mergedHighlights = [...(evidenceBank?.highlights ?? []), ...(extraEvidences ?? [])];
-      const mergedBank = (evidenceBank || mergedHighlights.length > 0)
-        ? {
-            repos: evidenceBank?.repos ?? [],
-            techStack: evidenceBank?.techStack ?? {},
-            highlights: mergedHighlights,
-          }
-        : null;
-      const emptyBank = !mergedBank || (mergedBank.repos.length === 0 && mergedBank.highlights.length === 0);
-      const finalResult = emptyBank ? coachingResult : { ...coachingResult, evidenceBank: mergedBank };
+      // GitHub 근거 + 범용 증빙 해석 결과를 하나의 EvidenceBank로 병합 (병합 로직은 core/analysis)
+      const mergedBank = mergeEvidenceBank(evidenceBank, extraEvidences ?? []);
+      const finalResult = mergedBank ? { ...coachingResult, evidenceBank: mergedBank } : coachingResult;
 
       const scoring = calculateScore(finalResult.gapMap, instruction, userData.resumeText, userData.jobDescription, companyContext);
       const scoredResult = { ...finalResult, matchScore: scoring.matchScore, scoringResult: scoring };

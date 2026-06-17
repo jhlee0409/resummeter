@@ -287,7 +287,7 @@ Step 4. 인간적 요소 추출
 - 모호한 표현("최적화된 레시피", "다양한 기법", "고도화된 시스템") 대신 이력서에서 확인 가능한 구체적 사실만 사용하십시오.
 
 ${formatInstruction(instruction)}
-${buildJobProfileContext(resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry))}
+${buildJobProfileContext(resolveJobProfile(instruction))}
 
 [이력서 원문]
 <user-resume>

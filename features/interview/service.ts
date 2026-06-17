@@ -28,7 +28,7 @@ export async function generateInterviewQuestions(
 
   const today = new Date().toISOString().split('T')[0];
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
-  const profile = resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry);
+  const profile = resolveJobProfile(instruction);
 
   const prompt = `[역할]
 당신은 ${profile.jobFamily} 직무의 면접관(${profile.practitionerPersona})입니다. 이력서와 채용 공고를 분석하여 실전 모의 면접 질문을 생성해주세요.

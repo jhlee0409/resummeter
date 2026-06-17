@@ -30,7 +30,7 @@ async function generateCoaching(
   const repoInfo = formatRepoInfo(githubRepos, githubData);
   const today = new Date().toISOString().split('T')[0];
   const { buildJobProfileContext, resolveJobProfile } = await import('../research/industryDetect');
-  const industryContext = buildJobProfileContext(resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry));
+  const industryContext = buildJobProfileContext(resolveJobProfile(instruction));
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
   const prompt = `[역할]

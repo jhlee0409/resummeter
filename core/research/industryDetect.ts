@@ -170,10 +170,9 @@ export function industryProfileToJobProfile(industry: Industry): JobProfile {
 
 /** instruction에서 JobProfile을 꺼내되, 없으면 detectedIndustry 기반 폴백 */
 export function resolveJobProfile(
-  jobProfile: JobProfile | undefined,
-  detectedIndustry: Industry | undefined,
+  instruction: { jobProfile?: JobProfile; detectedIndustry?: Industry },
 ): JobProfile {
-  return jobProfile ?? industryProfileToJobProfile(detectedIndustry ?? 'general');
+  return instruction.jobProfile ?? industryProfileToJobProfile(instruction.detectedIndustry ?? 'general');
 }
 
 /** JobProfile → 프롬프트 컨텍스트 블록 (buildIndustryContext의 동적 대체) */
