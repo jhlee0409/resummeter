@@ -13,7 +13,7 @@ const tips = [
   { emoji: "📊", text: "'매출 30% 성장에 기여'처럼 구체적인 수치가 포함된 이력서의 면접 전환율이 40% 높습니다." },
   { emoji: "🔑", text: "ATS(지원자 추적 시스템)는 JD의 키워드와 이력서의 키워드 매칭률을 기반으로 필터링합니다." },
   { emoji: "✍️", text: "'열심히 했다' 대신 '주도했다', '구축했다', '개선했다' 등 주도적 동사를 사용하세요." },
-  { emoji: "🤝", text: "GitHub 활동은 코드 실력뿐 아니라 문서화, 소통, 협업 능력의 증거가 됩니다." },
+  { emoji: "🤝", text: "포트폴리오·실적표·수상 이력 같은 증빙 자료는 역량을 객관적으로 뒷받침합니다." },
   { emoji: "🎯", text: "하나의 범용 이력서보다, 지원하는 포지션마다 맞춤 이력서를 준비하면 합격률이 높아집니다." },
 ];
 
@@ -39,7 +39,9 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage, hasGithub = f
     return () => clearInterval(tipInterval);
   }, []);
 
-  const progressPercent = Math.min(((currentStage + 1) / visibleStages.length) * 100, 100);
+  // 현재 단계는 "진행 중"이므로 절반만 반영 → 가장 느린 마지막 단계에서 100%가
+  // 먼저 차서 멈춰 보이는 문제 방지 (완료 시 컴포넌트가 REVIEW로 전환되며 사라짐)
+  const progressPercent = Math.min(((currentStage + 0.5) / visibleStages.length) * 100, 95);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[600px] max-w-lg mx-auto px-4">
@@ -57,12 +59,12 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage, hasGithub = f
       </div>
 
       <h3 className="text-xl font-bold text-zinc-100 mb-1 text-center">AI가 이력서를 코칭하고 있어요</h3>
-      <p className="text-zinc-500 text-sm mb-8 text-center">{hasGithub ? 'JD와 GitHub 활동을 종합해 근거 기반 수정 제안을 생성합니다' : 'JD를 분석하여 근거 기반 수정 제안을 생성합니다'}</p>
+      <p className="text-zinc-400 text-sm mb-8 text-center">{hasGithub ? 'JD와 GitHub 활동을 종합해 근거 기반 수정 제안을 생성합니다' : 'JD를 분석하여 근거 기반 수정 제안을 생성합니다'}</p>
 
       {/* Progress */}
       <div className="w-full mb-8">
         <div className="flex justify-between items-center mb-2">
-          <span className="text-[11px] font-semibold text-zinc-500">진행률</span>
+          <span className="text-[11px] font-semibold text-zinc-400">진행률</span>
           <span className="text-[11px] font-bold text-brand-400 section-num">{Math.round(progressPercent)}%</span>
         </div>
         <Progress.Root className="relative h-1.5 bg-zinc-800 rounded-full overflow-hidden" value={progressPercent}>
@@ -109,7 +111,7 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage, hasGithub = f
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`text-[13px] font-semibold truncate ${isCurrent ? 'text-brand-400' : isCompleted ? 'text-zinc-500' : 'text-zinc-700'}`}>
+                <p className={`text-[13px] font-semibold break-keep ${isCurrent ? 'text-brand-400' : isCompleted ? 'text-zinc-400' : 'text-zinc-600'}`}>
                   {stage.label}
                 </p>
                 {isCurrent && (
@@ -125,7 +127,7 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage, hasGithub = f
       <div className={`w-full glass-card rounded-xl px-5 py-3.5 transition-opacity duration-300 ${tipFade ? 'opacity-100' : 'opacity-0'}`}>
         <div className="flex items-start gap-3">
           <span className="text-base flex-shrink-0 mt-0.5">{tips[tipIndex].emoji}</span>
-          <p className="text-[12px] text-zinc-500 leading-relaxed">{tips[tipIndex].text}</p>
+          <p className="text-[12px] text-zinc-400 leading-relaxed">{tips[tipIndex].text}</p>
         </div>
       </div>
     </div>

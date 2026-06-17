@@ -134,22 +134,28 @@ export async function getOrCreateSessionCache(
 
   let cacheName: string | null = null;
 
-  try {
-    const cache = await getAI().caches.create({
-      model: MODEL_MAP[tier],
-      config: {
-        displayName: `resummeter-${tier}-session`,
-        systemInstruction: systemPrompt,
-        contents: [{ role: "user", parts: [{ text: contextBlock }] }],
-        ttl: "1800s", // 30분
-      },
-    });
-    cacheName = cache.name ?? null;
-  } catch {
-    // 캐시 생성 실패 (최소 토큰 미달 등) → 인라인 폴백
-    console.warn(
-      `[promptCache] ${tier} 캐시 생성 실패, 인라인 폴백 사용`
-    );
+  // Gemini Context Caching은 모델별 최소 토큰(현재 pro ≈1024, 2.5-pro ≈2048)이 있어
+  // 작은 입력은 400을 반환한다. 미달이 명백하면 생성 시도(불필요한 round-trip + 콘솔
+  // 노이즈)를 건너뛰고 바로 인라인 폴백한다. 큰 입력만 캐싱 → 경계값은 try/catch가 처리.
+  const MIN_CACHE_CHARS = 4000; // ≈ 1024+ 토큰 (한/영 혼합 보수 추정)
+  if (systemPrompt.length + contextBlock.length >= MIN_CACHE_CHARS) {
+    try {
+      const cache = await getAI().caches.create({
+        model: MODEL_MAP[tier],
+        config: {
+          displayName: `resummeter-${tier}-session`,
+          systemInstruction: systemPrompt,
+          contents: [{ role: "user", parts: [{ text: contextBlock }] }],
+          ttl: "1800s", // 30분
+        },
+      });
+      cacheName = cache.name ?? null;
+    } catch {
+      // 캐시 생성 실패 (추정과 달리 최소 토큰 미달 등) → 인라인 폴백
+      console.warn(
+        `[promptCache] ${tier} 캐시 생성 실패, 인라인 폴백 사용`
+      );
+    }
   }
 
   const session: SessionCache = {

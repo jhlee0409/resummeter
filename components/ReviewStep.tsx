@@ -367,10 +367,10 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
             <button
               key={group.key}
               onClick={() => switchGroup(group.key)}
-              className={`px-3 py-1.5 text-[10px] font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
+              className={`px-3 py-2 min-h-[40px] text-[11px] font-semibold rounded-lg transition-all whitespace-nowrap shrink-0 ${
                 activeGroup === group.key
                   ? 'bg-brand-500/15 text-brand-300 border border-brand-500/20'
-                  : 'text-zinc-500 hover:text-zinc-400 hover:bg-white/[0.03] border border-transparent'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03] border border-transparent'
               }`}
             >
               {group.label}
@@ -383,10 +383,10 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
             <button
               key={tab.key}
               onClick={() => { switchTab(tab.key); if (tab.key !== 'actions') setHighlightedGap(null); }}
-              className={`flex items-center justify-center gap-1.5 px-3 py-3 text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 ${
+              className={`flex items-center justify-center gap-1.5 px-3 py-3 min-h-[44px] text-[11px] font-semibold transition-all whitespace-nowrap shrink-0 ${
                 activeTab === tab.key
                   ? 'text-brand-400 border-b-2 border-brand-400 bg-brand-500/10'
-                  : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03]'
+                  : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.03]'
               }`}
             >
               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>

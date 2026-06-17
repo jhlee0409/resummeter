@@ -85,8 +85,8 @@ describe('ScoreDashboard', () => {
     const result = makeResult({ scoringResult: scoring });
     render(<ScoreDashboard result={result} originalData={baseUserInput} editedResume="" />);
     expect(screen.getByText('감점 내역')).toBeInTheDocument();
-    // breakdown 카테고리 라벨이 보여져야 함 (value > 0 만)
-    expect(screen.getByText('기술 스택')).toBeInTheDocument();
+    // breakdown 카테고리 라벨이 보여져야 함 (value > 0 만) — 전 직무 범용화로 '기술 스택'→'핵심 역량'
+    expect(screen.getByText('핵심 역량')).toBeInTheDocument();
   });
 
   it('scoringResult가 없으면 감점 내역을 렌더링하지 않는다', () => {
