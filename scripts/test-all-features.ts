@@ -97,7 +97,7 @@ const detailed = await cached('detailed', [resumeText.slice(0, 200), jdText.slic
   analyzeDetailedScore(resumeText, jdText, JSON.stringify(instruction), ctx)
 );
 check('상세점수 overall', detailed.overall >= 0 && detailed.overall <= 100, `${detailed.overall}점`);
-check('상세점수 breakdown', !!detailed.breakdown, `techStack=${detailed.breakdown?.techStack?.score ?? '?'}, impact=${detailed.breakdown?.impact?.score ?? '?'}`);
+check('상세점수 breakdown', !!detailed.breakdown, `coreSkills=${detailed.breakdown?.coreSkills?.score ?? '?'}, impact=${detailed.breakdown?.impact?.score ?? '?'}`);
 
 // ── 5. 경력기술서 ──
 console.log('\n── 경력기술서 ──');

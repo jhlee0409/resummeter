@@ -49,29 +49,29 @@ export default function DetailedScoreView({
           섹션별 점수 분석
         </h3>
         <div className="space-y-6">
-          {/* 기술 스택 */}
+          {/* 핵심 역량 */}
           <div>
             <div className="flex items-center justify-between mb-2">
               <span className="text-slate-300 font-medium">
-                기술 스택 관련성
+                핵심 역량 관련성
               </span>
               <span
-                className={`font-semibold ${getScoreColor(breakdown.techStack.score)}`}
+                className={`font-semibold ${getScoreColor(breakdown.coreSkills.score)}`}
               >
-                {Math.round(breakdown.techStack.score)}{" "}
+                {Math.round(breakdown.coreSkills.score)}{" "}
                 <span className="text-slate-400 text-sm">
-                  (가중치 {breakdown.techStack.weight * 100}%)
+                  (가중치 {breakdown.coreSkills.weight * 100}%)
                 </span>
               </span>
             </div>
             <div className="w-full bg-slate-700 rounded-full h-3">
               <div
-                className={`h-3 rounded-full ${getScoreBg(breakdown.techStack.score)}`}
-                style={{ width: `${breakdown.techStack.score}%` }}
+                className={`h-3 rounded-full ${getScoreBg(breakdown.coreSkills.score)}`}
+                style={{ width: `${breakdown.coreSkills.score}%` }}
               />
             </div>
             <ul className="mt-2 space-y-1">
-              {breakdown.techStack.details.map((detail, idx) => (
+              {breakdown.coreSkills.details.map((detail, idx) => (
                 <li key={idx} className="text-sm text-slate-400">
                   • {detail}
                 </li>

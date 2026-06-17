@@ -10,7 +10,7 @@ import {
 } from "../../shared/prompt/promptBlocks";
 
 export const DEFAULT_INSTRUCTION: TailoredInstructionWithRequirements = {
-  persona: "한국 IT 기업의 전문 채용 담당자",
+  persona: "한국 기업의 전문 채용 담당자",
   keywords: [],
   evaluationCriteria: {
     hardSkills: [],

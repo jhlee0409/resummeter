@@ -28,6 +28,7 @@ import {
   buildSystemPrompt,
 } from "../../shared/prompt/promptBlocks";
 import { formatRepoInfo, formatCompanyContext } from "../../shared/prompt/formatters";
+import { buildJobProfileContext, resolveJobProfile } from "../../core/research/industryDetect";
 
 // ─────────────────────────────────────────────────────────────
 // Constants
@@ -79,16 +80,16 @@ const TECH_NARRATIVE_RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     title: { type: Type.STRING, description: "섹션 제목 (한국어)" },
-    content: { type: Type.STRING, description: "생성된 서술형 텍스트 전문. 문제 정의→기술적 접근→구현→임팩트 순서로 자연스럽게 연결된 하나의 완성된 글" },
+    content: { type: Type.STRING, description: "생성된 서술형 텍스트 전문. 문제 정의→핵심 접근→실행→임팩트 순서로 자연스럽게 연결된 하나의 완성된 글" },
     charCount: { type: Type.NUMBER, description: "content의 실제 글자 수 (공백 포함)" },
     techNarrativeBreakdown: {
       type: Type.OBJECT,
-      description: "Tech Narrative 구조 분해",
+      description: "문제해결 서사 구조 분해 (직무 맥락에 맞게 — 개발 직무가 아니면 기술 용어 강요 금지)",
       properties: {
-        problemDefinition: { type: Type.STRING, description: "문제 정의 — 해결해야 했던 기술적 문제" },
-        technicalApproach: { type: Type.STRING, description: "기술적 접근 — 분석 방법과 선택 이유" },
-        implementation: { type: Type.STRING, description: "구현 — 핵심 기술 결정과 트레이드오프" },
-        impact: { type: Type.STRING, description: "임팩트 — 수치로 표현한 성과 (예: 'API 응답 시간 8초→4초')" },
+        problemDefinition: { type: Type.STRING, description: "문제 정의 — 해결해야 했던 핵심 문제" },
+        technicalApproach: { type: Type.STRING, description: "핵심 접근 — 분석 방법과 선택 이유 (직무 맥락)" },
+        implementation: { type: Type.STRING, description: "실행 — 핵심 결정과 트레이드오프" },
+        impact: { type: Type.STRING, description: "임팩트 — 수치로 표현한 성과 (예: '전환율 2%→3.5%', '처리시간 8초→4초')" },
       },
       required: ["problemDefinition", "technicalApproach", "implementation", "impact"],
     },
@@ -135,9 +136,9 @@ function buildNarrativeAnalysisSchema(framework: NarrativeFramework) {
       }
     : {
         type: Type.OBJECT,
-        description: "Tech Narrative 아웃라인. 기술 문제해결 서사 구조",
+        description: "문제해결 서사 아웃라인. 직무 맥락의 문제해결 서사 구조 (개발 직무가 아니면 기술 용어 강요 금지)",
         properties: {
-          problemDefinition: { type: Type.STRING, description: "문제 정의: 해결해야 했던 기술적 문제. 구체적 수치/제약조건 포함" },
+          problemDefinition: { type: Type.STRING, description: "문제 정의: 해결해야 했던 핵심 문제. 구체적 수치/제약조건 포함" },
           technicalApproach: {
             type: Type.OBJECT,
             properties: {
@@ -147,7 +148,7 @@ function buildNarrativeAnalysisSchema(framework: NarrativeFramework) {
             },
             required: ["alternatives", "chosenSolution", "trialAndError"],
           },
-          implementation: { type: Type.STRING, description: "구현: 핵심 기술 결정, 사용한 도구/방법론, 구체적 행동" },
+          implementation: { type: Type.STRING, description: "실행: 핵심 결정, 사용한 도구/방법, 구체적 행동" },
           impact: { type: Type.STRING, description: "임팩트: 정량 성과 (before→after 수치). 없으면 [수치 기입] 플레이스홀더" },
         },
         required: ["problemDefinition", "technicalApproach", "implementation", "impact"],
@@ -286,6 +287,7 @@ Step 4. 인간적 요소 추출
 - 모호한 표현("최적화된 레시피", "다양한 기법", "고도화된 시스템") 대신 이력서에서 확인 가능한 구체적 사실만 사용하십시오.
 
 ${formatInstruction(instruction)}
+${buildJobProfileContext(resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry))}
 
 [이력서 원문]
 <user-resume>
@@ -297,7 +299,7 @@ ${resumeText}
 ${jobDescription}
 </user-jd>
 
-${repoInfo ? `[GitHub 리포지토리]\n${repoInfo}` : ''}
+${repoInfo ? `[참고 자료]\n${repoInfo}` : ''}
 ${coachingContext}`;
 
   const response = await withRetry(() => getAI().models.generateContent({
@@ -343,11 +345,11 @@ A(행동):
 R(결과): ${ol.result}
 K(가능성): ${ol.potential}`
     : `문제 정의: ${ol.problemDefinition}
-기술적 접근:
+핵심 접근:
   - 검토한 대안: ${(ol.technicalApproach as Record<string, string>)?.alternatives || ''}
   - 선택한 방법: ${(ol.technicalApproach as Record<string, string>)?.chosenSolution || ''}
   - 시행착오: ${(ol.technicalApproach as Record<string, string>)?.trialAndError || ''}
-구현: ${ol.implementation}
+실행: ${ol.implementation}
 임팩트: ${ol.impact}`;
 
   // 서술 주어별 글 구조 가이드
@@ -357,8 +359,8 @@ K(가능성): ${ol.potential}`
 - 비중: 강점 정의(15%) → 경험으로 증명(60%) → 강점이 직무에 어떻게 적용되는지(25%)
 - 경험 서술 시 "이 행동이 왜 해당 강점의 발현인지" 연결이 반드시 있어야 합니다.`,
     project: `[서술 주어: 프로젝트/경험 중심]
-- 글의 중심축은 "프로젝트"입니다. 기술 디테일과 본인 역할에 집중하십시오.
-- 비중: 프로젝트 배경(15%) → 기술적 과제와 해결(55%) → 성과와 본인 역할 명시(30%)
+- 글의 중심축은 "프로젝트/업무"입니다. 핵심 실무 디테일과 본인 역할에 집중하십시오.
+- 비중: 배경(15%) → 핵심 과제와 해결 과정(55%) → 성과와 본인 역할 명시(30%)
 - 반드시 "내가 한 것"과 "팀이 한 것"을 구분하십시오. 모호한 "우리"는 감점 요소입니다.`,
     value: `[서술 주어: 가치관/성격 중심]
 - 글의 중심축은 "신념/가치관"입니다. 경험은 이 가치관이 형성된 에피소드입니다.
@@ -414,7 +416,7 @@ ${outlineText}
    - 예: 질문이 "AI 활용 경험"이면 → "AI 자동 응답 시스템을 구축하여 운영 인건비 70%를 절감한 경험이 있습니다"
    - 예: 질문이 "고객을 만나 문제 발견"이면 → "방송 현장에서 자동화 도구가 오히려 운영자 부담을 키우는 역설을 발견하고 해결했습니다"
 2. 서사의 흐름: 모든 문장은 앞 문장의 결과이거나 다음 문장의 원인이어야 합니다.
-3. 기술적 의사결정의 "왜"를 보여주세요: "A를 도입했습니다"가 아니라 "A와 B를 X 기준으로 비교한 결과, Y 때문에 A를 선택했습니다"처럼 트레이드오프를 드러내십시오. 도구/기술을 선택한 이유를 쓰지 않으면 깊이 없는 글이 됩니다.
+3. 의사결정의 "왜"를 보여주세요: "A를 했습니다"가 아니라 "A와 B를 X 기준으로 비교한 결과, Y 때문에 A를 선택했습니다"처럼 트레이드오프를 드러내십시오. 방법/도구/접근을 선택한 이유를 쓰지 않으면 깊이 없는 글이 됩니다.
 4. 시행착오는 필수입니다: 처음부터 성공한 이야기는 AI가 쓴 글입니다. 반드시 1가지 이상의 시행착오, 실패, 예상과 달랐던 점을 포함하십시오. "처음에는 ~할 것이라 예상했지만 실제로는 ~였다", "초기에는 ~했으나 결과가 좋지 않아 ~로 전환했다" 같은 반전이 진정성을 만듭니다.
 5. 구조를 감추세요: 프레임워크는 설계도일 뿐, 글에서 구조가 보이면 안 됩니다.
 6. 전환의 필연성: "이러한 경험은 ~에서도 이어졌습니다" 금지. 필연적 연결고리만.

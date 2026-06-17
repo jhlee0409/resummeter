@@ -126,7 +126,7 @@ const detailed = await analyzeDetailedScore(resumeText, jdText, JSON.stringify(i
 timeEnd('detailed');
 log('상세 점수', {
   overall: detailed.overall,
-  techStack: detailed.breakdown?.techStack?.score,
+  coreSkills: detailed.breakdown?.coreSkills?.score,
   experience: detailed.breakdown?.experience?.score,
   impact: detailed.breakdown?.impact?.score,
   readability: detailed.breakdown?.readability?.score,

@@ -80,7 +80,8 @@ export interface InterviewSession {
 
 export interface LearningResource {
   title: string;
-  platform: 'inflearn' | 'udemy' | 'coursera' | 'youtube' | 'docs';
+  /** 학습 자원의 종류/제공처. 직무 범용 — 개발 강의 플랫폼에 국한하지 않음 (예: 인프런, Coursera, 보수교육, 공식문서, 도서) */
+  platform: string;
   url: string;
   level: 'beginner' | 'intermediate' | 'advanced';
 }

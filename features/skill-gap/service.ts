@@ -12,6 +12,7 @@ import {
   RESUME_HIERARCHY,
   GROUNDING_SKILLGAP,
 } from "../../shared/prompt/promptBlocks";
+import { buildJobProfileContext, resolveJobProfile } from "../../core/research/industryDetect";
 import { withRetry } from '../../shared/api/retry';
 import { safeParseJSON } from '../../shared/lib/validation';
 import { classifyError } from '../../shared/lib/errors';
@@ -29,8 +30,11 @@ export async function analyzeLearningRoadmap(
   const gaps = gapMap.filter((item) => item.currentLevel === "missing" || item.currentLevel === "weak");
   const companyBlock = companyContext ? formatCompanyContext(companyContext) : '';
 
+  const profile = resolveJobProfile(instruction.jobProfile, instruction.detectedIndustry);
+
   const prompt = `
-당신은 개발자 커리어 코칭 전문가입니다.
+당신은 ${profile.jobFamily} 직무의 커리어 코칭 전문가입니다.
+${buildJobProfileContext(profile)}
 ${companyBlock}
 
 # 입력 정보
@@ -47,8 +51,9 @@ ${JSON.stringify(instruction, null, 2)}
 각 스킬 갭에 대해 학습 로드맵을 생성하세요.
 - 각 갭의 우선순위를 평가하고 (critical, high, medium, low)
 - 학습 리소스를 최소 3개 이상 추천하세요
-- 플랫폼: 인프런, Udemy, Coursera, YouTube, 공식문서
-- URL은 검색 링크 형태로 제공 (예: https://www.inflearn.com/courses?s=keyword)
+- 이 직무에 적합한 학습 자원 종류를 사용하세요: ${profile.learningResourceTypes.join(', ') || '온라인 강의, 공식 교육/자격 과정, 도서, 실무 워크숍'}
+- platform 필드: 학습 자원의 종류/제공처를 직무에 맞게 자유롭게 기입 (예: "인프런", "Coursera", "대한간호협회 보수교육", "국세청 교육", "Meta Blueprint", "도서", "공식문서")
+- URL: 해당 자원을 찾을 수 있는 검색/공식 링크를 제공 (불확실하면 신뢰할 만한 검색 링크)
 - 각 리소스의 난이도를 명시하세요 (beginner, intermediate, advanced)
 - 예상 학습 노력도를 추정하세요 (예: "2-3주", "1개월", "3개월")
 
@@ -91,7 +96,7 @@ ${JSON.stringify(instruction, null, 2)}
                   title: { type: Type.STRING },
                   platform: {
                     type: Type.STRING,
-                    enum: ["inflearn", "udemy", "coursera", "youtube", "docs"]
+                    description: "학습 자원의 종류/제공처 (직무에 맞게 자유 기입: 인프런, Coursera, 보수교육, 공식문서, 도서 등)"
                   },
                   url: { type: Type.STRING },
                   level: {

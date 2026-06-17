@@ -44,7 +44,7 @@ ${AI_DETECTION_LINKEDIN}
 특정 채용 공고에 맞추지 말고, 이 사람의 현재 역량과 경험을 가장 잘 드러내는 프로필을 만드세요.
 
 1. **Headline 최적화** (120자 이내)
-   - 현재 직무 + 핵심 기술 스택
+   - 현재 직무 + 핵심 역량/전문 분야
    - LinkedIn 검색 최적화 (업계에서 많이 검색되는 키워드)
    - 전문성이 한눈에 드러나도록
 
@@ -64,11 +64,11 @@ ${AI_DETECTION_LINKEDIN}
    - 현재 프로필에서의 등장 횟수
    - 권장 등장 횟수
 
-[Few-shot 예시]
-GOOD headline: "백엔드 개발자 | 대용량 트래픽 처리 전문 | Redis, Kafka, Spring Boot" (역할 + 전문성 + 기술 스택)
-BAD headline: "열정적인 개발자입니다" (구체성 없음, 검색 불가)
-GOOD experience highlight: "일 50만건 주문 처리 API 설계, 응답시간 3.2초→0.4초 단축 (Redis 캐싱 + Kafka 비동기 큐)" (수치 + 기술 + 임팩트)
-BAD experience highlight: "서버 개발 담당" (성과 없음, 기술 없음)
+[Few-shot 예시 — 직무 무관 원칙]
+GOOD headline: 역할 + 전문 분야 + 핵심 성과/역량을 압축 (예: "B2B 영업 매니저 | SaaS 엔터프라이즈 딜 | 연 매출 목표 120%+ 달성")
+BAD headline: "열정적인 ○○입니다" (구체성 없음, 검색 불가)
+GOOD experience highlight: 구체적 행동 + 정량 성과 (예: "신규 고객사 35곳 발굴, 연 매출 4.3억 신규 창출(목표 대비 125%)")
+BAD experience highlight: "○○ 담당" (성과 없음, 구체성 없음)
 
 모든 내용은 한국어로 작성하세요.
 
