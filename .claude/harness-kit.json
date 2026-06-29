@@ -1,0 +1,7 @@
+{
+  "verify_command": "tsc --noEmit && vitest run",
+  "blocking": false,
+  "protected_branches": ["main", "master", "develop", "release"],
+  "worktree_workflow": false,
+  "pr_workflow": { "host": "github", "ci": null, "merge_gate": null }
+}
