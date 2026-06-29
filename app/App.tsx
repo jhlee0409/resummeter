@@ -18,6 +18,17 @@ import { getOrCreateSessionCache, invalidateCache, type SessionCache } from '../
 import { toast } from 'sonner';
 import { useFeatureStore } from '../stores/featureStore';
 
+// sessionStorage 저장본에서 대용량 base64(증빙 파일 내용)를 제거 → 쿼터 초과로 userData 전체가
+// 저장되지 못하는 문제 방지. 메타데이터(파일명/라벨 등)는 유지하고 dataBase64만 비운다.
+// (분석은 세션 메모리의 원본을 사용하므로 영향 없음. 새로고침 시 파일 내용만 재첨부 필요.)
+const stripEvidenceDataForStorage = (d: UserInputData): UserInputData => {
+  if (!d.evidenceInputs?.length) return d;
+  return {
+    ...d,
+    evidenceInputs: d.evidenceInputs.map(e => (e.dataBase64 ? { ...e, dataBase64: undefined } : e)),
+  };
+};
+
 const App: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<AppStep>(AppStep.UPLOAD);
 
@@ -29,11 +40,11 @@ const App: React.FC = () => {
     githubRepos: [{ url: '', description: '' }],
     githubData: undefined,
     evidenceInputs: [],
-  });
+  }, stripEvidenceDataForStorage);
 
   const [result, setResult] = useState<CoachingResult | null>(null);
   const [instruction, setInstruction] = useState<TailoredInstructionWithRequirements | null>(null);
-  const [analysisStage, setAnalysisStage] = useState<'jd-analysis' | 'resume-analysis' | 'coaching' | 'evidence-matching'>('jd-analysis');
+  const [analysisStage, setAnalysisStage] = useState<'jd-analysis' | 'resume-analysis' | 'coaching'>('jd-analysis');
 
   const handleInputChange = <K extends keyof UserInputData>(field: K, value: UserInputData[K]) => {
     setUserData(prev => ({ ...prev, [field]: value }));

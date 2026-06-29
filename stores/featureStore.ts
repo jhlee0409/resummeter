@@ -120,7 +120,8 @@ export const useFeatureStore = create<FeatureState>((set) => ({
     set(s => ({ interview: { ...s.interview, loading: true, error: null } }));
     try {
       const result = await generateInterviewQuestions(resumeText, jd, instruction, companyContext);
-      set(s => ({ interview: { ...s.interview, result, loading: false, error: null } }));
+      // 새 질문 세트 → 이전 답변/피드백 초기화 (완료 카운트·진행바 부풀림 방지)
+      set(s => ({ interview: { ...s.interview, result, loading: false, error: null, answers: {}, feedbacks: {} } }));
     } catch (e: unknown) {
       set(s => ({ interview: { ...s.interview, loading: false, error: e instanceof Error ? e.message : String(e) } }));
     }
@@ -199,7 +200,7 @@ export const useFeatureStore = create<FeatureState>((set) => ({
 
   setCareerStatementResult: (result) => set({ careerStatement: { result, loading: false, error: null } }),
   setCoverLetterResult: (result) => set({ coverLetter: { result, loading: false, error: null } }),
-  setInterviewQuestions: (result) => set(s => ({ interview: { ...s.interview, result, loading: false, error: null } })),
+  setInterviewQuestions: (result) => set(s => ({ interview: { ...s.interview, result, loading: false, error: null, answers: {}, feedbacks: {} } })),
   setLinkedInResult: (result) => set({ linkedIn: { result, loading: false, error: null } }),
   setPractitionerResult: (result) => set({ practitioner: { result, loading: false, error: null } }),
 

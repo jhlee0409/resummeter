@@ -25,7 +25,7 @@ interface PipelinePanelProps {
 interface ResultCard {
   label: string;
   tab: string;
-  status: 'done' | 'error';
+  status: 'done' | 'error' | 'manual';
   detail: string;
 }
 
@@ -47,7 +47,8 @@ function getResultCards(type: PipelineType, results: PipelineResults): ResultCar
       break;
     case 'personal-branding':
       if (results.linkedinOptimization) cards.push({ label: 'LinkedIn', tab: 'linkedin', status: 'done', detail: '프로필 최적화 완료' });
-      cards.push({ label: '한줄소개', tab: 'about-statement', status: 'done', detail: '직접 입력 후 고도화' });
+      // 한줄소개는 자동 생성하지 않음 — 사용자 초안 입력이 필요하므로 'manual'로 안내한다.
+      cards.push({ label: '한줄소개', tab: 'about-statement', status: 'manual', detail: '직접 입력 필요' });
       break;
   }
   return cards;
@@ -362,23 +363,32 @@ export function PipelinePanel({
                   </div>
                 ) : completed && pipelineResults[card.type] ? (
                   <div className="space-y-1.5">
-                    {getResultCards(card.type, pipelineResults[card.type]).map((rc) => (
+                    {getResultCards(card.type, pipelineResults[card.type]).map((rc) => {
+                      const manual = rc.status === 'manual';
+                      return (
                       <button
                         key={rc.tab}
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onNavigate?.(rc.tab); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors text-left"
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-colors text-left ${manual ? 'bg-amber-500/5 border-amber-500/15 hover:bg-amber-500/10' : 'bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10'}`}
                       >
-                        <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className="text-[11px] font-semibold text-emerald-300">{rc.label}</span>
+                        {manual ? (
+                          <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        <span className={`text-[11px] font-semibold ${manual ? 'text-amber-300' : 'text-emerald-300'}`}>{rc.label}</span>
                         <span className="text-[10px] text-zinc-500 ml-auto">{rc.detail}</span>
                         <svg className="w-3 h-3 text-zinc-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center py-2">

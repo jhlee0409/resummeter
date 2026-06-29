@@ -73,4 +73,17 @@ describe('useSessionState', () => {
     expect(result.current[0]).toEqual({ a: 2, b: 'y' });
     expect(JSON.parse(store['obj'])).toEqual({ a: 2, b: 'y' });
   });
+
+  it('sanitize: 메모리 상태는 원본, 저장본은 가공본만 (대용량 base64 제거)', () => {
+    type V = { text: string; heavy?: string };
+    const strip = (v: V): V => ({ ...v, heavy: undefined });
+    const { result } = renderHook(() => useSessionState<V>('san', { text: '' }, strip));
+    act(() => {
+      result.current[1]({ text: 'keep', heavy: 'BIG_BASE64' });
+    });
+    // 메모리 상태는 원본 유지
+    expect(result.current[0]).toEqual({ text: 'keep', heavy: 'BIG_BASE64' });
+    // 저장본에는 heavy가 없어야 함
+    expect(JSON.parse(store['san'])).toEqual({ text: 'keep' });
+  });
 });
