@@ -47,9 +47,13 @@ const App: React.FC = () => {
     }
     setInstruction(cached.instruction);
     setResult(cached.result);
-    if (cached.companyContext) {
-      setUserData(prev => ({ ...prev, companyContext: cached.companyContext }));
-    }
+    // 원문 텍스트 + 회사 컨텍스트 복원 (companyContext는 무조건 set하여 이전 값 클리어)
+    setUserData(prev => ({
+      ...prev,
+      resumeText: cached.resumeText,
+      jobDescription: cached.jobDescription,
+      companyContext: cached.companyContext ?? undefined,
+    }));
     toast.success('이전 분석 결과를 불러왔습니다');
     track({ type: 'analysis_complete', matchScore: cached.result.matchScore, durationMs: 0 });
     setCurrentStep(AppStep.REVIEW);
@@ -63,9 +67,13 @@ const App: React.FC = () => {
     }
     setInstruction(cached.instruction);
     setResult(cached.result);
-    if (cached.companyContext) {
-      setUserData(prev => ({ ...prev, companyContext: cached.companyContext }));
-    }
+    // 캐시 키 로드: 원문 텍스트가 없으면 원본 패널/diff/기능 탭이 빈 입력으로 동작하므로 반드시 복원
+    setUserData(prev => ({
+      ...prev,
+      resumeText: cached.resumeText,
+      jobDescription: cached.jobDescription,
+      companyContext: cached.companyContext ?? undefined,
+    }));
     toast.success('이전 분석 결과를 불러왔습니다');
     track({ type: 'analysis_complete', matchScore: cached.result.matchScore, durationMs: 0 });
     setCurrentStep(AppStep.REVIEW);
@@ -105,11 +113,9 @@ const App: React.FC = () => {
       setInstruction(instructionResult);
       const instruction = instructionResult;
 
-      // 리서치 결과 합성
+      // 리서치 결과 합성 — 무조건 set하여 이전 분석의 stale 회사 컨텍스트가 새어들지 않도록 클리어
       const companyContext = mergeResearchResults(companyInfo, jobRoleInfo);
-      if (companyContext) {
-        setUserData(prev => ({ ...prev, companyContext }));
-      }
+      setUserData(prev => ({ ...prev, companyContext: companyContext ?? undefined }));
 
       // Context Caching: 공통 컨텍스트를 Gemini 서버에 캐싱
       const sessionCache = await getOrCreateSessionCache('pro', userData.resumeText, userData.jobDescription, instruction).catch(() => null);

@@ -147,13 +147,18 @@ export const QUANTIFICATION_NARRATIVE = `[수치화 패턴 예시]
 // ── JD 구조화 결과 포매터 (14개 프롬프트에서 반복) ──────────
 import type { TailoredInstructionWithRequirements } from "../../types";
 
+/** JD 평가 기준 4줄 (키워드/하드/소프트/우대) — 분석 프롬프트에서 페르소나·어조 없이 재사용 */
+export function formatInstructionCriteria(instruction: TailoredInstructionWithRequirements): string {
+  return `- 필수 키워드: ${instruction.keywords.join(', ')}
+- Hard Skills: ${instruction.evaluationCriteria.hardSkills.join(', ')}
+- Soft Skills: ${instruction.evaluationCriteria.softSkills.join(', ')}
+- 우대 경험: ${instruction.evaluationCriteria.preferredExperience.join(', ')}`;
+}
+
 export function formatInstruction(instruction: TailoredInstructionWithRequirements): string {
   return `[JD 구조화 결과]
 - 페르소나: ${instruction.persona}
-- 필수 키워드: ${instruction.keywords.join(', ')}
-- Hard Skills: ${instruction.evaluationCriteria.hardSkills.join(', ')}
-- Soft Skills: ${instruction.evaluationCriteria.softSkills.join(', ')}
-- 우대 경험: ${instruction.evaluationCriteria.preferredExperience.join(', ')}
+${formatInstructionCriteria(instruction)}
 - 어조: ${instruction.toneGuide.style}, ${instruction.toneGuide.endings}
 - 금지 패턴: ${instruction.toneGuide.avoidPatterns.join(', ')}`;
 }

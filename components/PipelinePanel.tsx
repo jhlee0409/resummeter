@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { TailoredInstructionWithRequirements, CoachingResult } from '../types';
+import type { TailoredInstructionWithRequirements, CoachingResult, CompanyContext, GitHubFetchResult, GithubRepo } from '../types';
 import {
   runPipeline,
   type PipelineType,
@@ -15,6 +15,10 @@ interface PipelinePanelProps {
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
   coachingResult: CoachingResult;
+  // grounding — 탭별 생성 버튼과 동일한 컨텍스트를 파이프라인에도 전달
+  companyContext?: CompanyContext | null;
+  githubData?: GitHubFetchResult[];
+  githubRepos?: GithubRepo[];
 }
 
 // Maps pipeline results to navigable summary cards
@@ -186,6 +190,9 @@ export function PipelinePanel({
   jobDescription,
   instruction,
   coachingResult,
+  companyContext,
+  githubData,
+  githubRepos,
 }: PipelinePanelProps) {
   const [runningType, setRunningType] = useState<PipelineType | null>(null);
   const [progress, setProgress] = useState<PipelineProgress | null>(null);
@@ -193,26 +200,41 @@ export function PipelinePanel({
     new Set(),
   );
   const [pipelineResults, setPipelineResults] = useState<Record<string, PipelineResults>>({});
+  // 단계가 하나라도 실패하면 최종 step 상태를 보존 → 빨간 에러 인디케이터가 사라지지 않게.
+  const [errorSteps, setErrorSteps] = useState<Partial<Record<PipelineType, PipelineStep[]>>>({});
 
   const handleRun = async (type: PipelineType) => {
     if (runningType) return; // prevent concurrent runs
 
     setRunningType(type);
     setProgress(null);
+    setErrorSteps((prev) => {
+      const next = { ...prev };
+      delete next[type];
+      return next;
+    });
 
     try {
-      const results = await runPipeline(
+      const { results, steps } = await runPipeline(
         type,
         resumeText,
         jobDescription,
         instruction,
         coachingResult,
         (p) => setProgress(p),
+        { companyContext, githubData, githubRepos },
       );
 
-      setCompletedTypes((prev) => new Set([...prev, type]));
+      const hasError = steps.some((s) => s.status === 'error');
       setPipelineResults((prev) => ({ ...prev, [type]: results }));
-      onRun(type, results);
+      onRun(type, results); // 성공한 단계 결과는 그대로 store에 반영
+
+      if (hasError) {
+        // '완료' 처리하지 않고 실패 단계를 계속 노출 (사용자가 재시도 가능)
+        setErrorSteps((prev) => ({ ...prev, [type]: steps }));
+      } else {
+        setCompletedTypes((prev) => new Set([...prev, type]));
+      }
     } catch (err) {
       console.error('Pipeline failed:', err);
     } finally {
@@ -331,6 +353,13 @@ export function PipelinePanel({
                   currentProgress.steps.map((step) => (
                     <StepIndicator key={step.id} step={step} />
                   ))
+                ) : errorSteps[card.type] ? (
+                  <div className="space-y-1.5">
+                    {errorSteps[card.type]!.map((step) => (
+                      <StepIndicator key={step.id} step={step} />
+                    ))}
+                    <p className="text-[10px] text-red-400/70 pt-0.5">일부 단계 실패 — 다시 클릭해 재시도</p>
+                  </div>
                 ) : completed && pipelineResults[card.type] ? (
                   <div className="space-y-1.5">
                     {getResultCards(card.type, pipelineResults[card.type]).map((rc) => (

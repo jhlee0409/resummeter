@@ -19,7 +19,7 @@ import type {
   CompanyContext,
 } from "../../types";
 import { getAI, MODELS } from "../../shared/api/geminiClient";
-import { withRetry } from "../../shared/api/retry";
+import { withRetry, sleep } from "../../shared/api/retry";
 import { safeParseJSON } from "../../shared/lib/validation";
 import { classifyError } from "../../shared/lib/errors";
 import {
@@ -542,8 +542,6 @@ export async function generateNarrativeSection(
     };
   }
 }
-
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function generateNarrativeSections(
   specs: NarrativeSectionSpec[],

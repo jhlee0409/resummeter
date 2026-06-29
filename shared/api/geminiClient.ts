@@ -15,7 +15,7 @@
 // 실패 시 자동으로 인라인 폴백합니다.
 // ─────────────────────────────────────────────────────────────
 
-import type { TailoredInstructionWithRequirements, GithubRepo } from "../../types";
+import type { TailoredInstructionWithRequirements } from "../../types";
 import {
   SECURITY_RULE,
   GROUNDING_FULL,
@@ -100,23 +100,12 @@ function buildContextBlock(
   resume: string,
   jd: string,
   instruction: TailoredInstructionWithRequirements,
-  repos?: GithubRepo[]
 ): string {
-  const parts = [
+  return [
     formatInstruction(instruction),
     `<user-resume>\n${resume}\n</user-resume>`,
     `<user-jd>\n${jd}\n</user-jd>`,
-  ];
-  if (repos && repos.length > 0) {
-    const repoInfo = repos
-      .map(
-        (r) =>
-          `- ${r.name}: ${r.description || "설명 없음"} (${r.language || "N/A"}, ⭐${r.stars || 0})`
-      )
-      .join("\n");
-    parts.push(`<github-repos>\n${repoInfo}\n</github-repos>`);
-  }
-  return parts.join("\n\n");
+  ].join("\n\n");
 }
 
 // ── 캐시 생성/조회 ──────────────────────────────────────────
@@ -143,7 +132,6 @@ export async function getOrCreateSessionCache(
   resume: string,
   jd: string,
   instruction: TailoredInstructionWithRequirements,
-  repos?: GithubRepo[]
 ): Promise<SessionCache> {
   const fp = fingerprint(resume, jd, instruction);
   const existing = tier === "flash" ? _flashCache : _proCache;
@@ -154,7 +142,7 @@ export async function getOrCreateSessionCache(
   }
 
   const systemPrompt = COMMON_SYSTEM_PROMPT;
-  const contextBlock = buildContextBlock(resume, jd, instruction, repos);
+  const contextBlock = buildContextBlock(resume, jd, instruction);
 
   let cacheName: string | null = null;
 

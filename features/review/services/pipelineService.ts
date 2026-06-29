@@ -3,6 +3,9 @@ import type {
   CoachingResult,
   NarrativeSectionSpec,
   CoverLetterConfig,
+  CompanyContext,
+  GitHubFetchResult,
+  GithubRepo,
 } from '../../../types';
 import { generateCareerStatements } from '../../career-statement/service';
 import { generateCoverLetter } from '../../cover-letter/service';
@@ -46,6 +49,22 @@ export interface PipelineResults {
   aboutStatement?: any;
 }
 
+/**
+ * 파이프라인 생성에 함께 전달되는 grounding 컨텍스트.
+ * 탭별 생성 버튼과 동일한 회사 리서치/GitHub 근거를 사용하기 위함.
+ */
+export interface PipelineContext {
+  companyContext?: CompanyContext | null;
+  githubData?: GitHubFetchResult[];
+  githubRepos?: GithubRepo[];
+}
+
+/** 파이프라인 실행 결과 + 각 단계 최종 상태 (단계 실패 판정용) */
+export interface PipelineRunResult {
+  results: PipelineResults;
+  steps: PipelineStep[];
+}
+
 // ─────────────────────────────────────────────────────────────
 // Pipeline Definitions
 // ─────────────────────────────────────────────────────────────
@@ -58,6 +77,7 @@ interface PipelineDefinition {
     instruction: TailoredInstructionWithRequirements,
     coachingResult: CoachingResult,
     updateStep: (index: number, status: PipelineStep['status'], error?: string) => void,
+    ctx: PipelineContext,
   ) => Promise<PipelineResults>;
 }
 
@@ -69,7 +89,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
       { id: 'cover-letter', label: '커버레터' },
       { id: 'narrative', label: '서술형 자소서' },
     ],
-    async run(resumeText, jobDescription, instruction, coachingResult, updateStep) {
+    async run(resumeText, jobDescription, instruction, coachingResult, updateStep, ctx) {
       const results: PipelineResults = {};
 
       // Step 1: 경력기술서
@@ -79,6 +99,8 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
           resumeText,
           jobDescription,
           instruction,
+          ctx.githubData,
+          ctx.companyContext,
         );
         updateStep(0, 'done');
       } catch (err: unknown) {
@@ -100,6 +122,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
           instruction,
           coverLetterConfig,
           coachingResult,
+          ctx.companyContext,
         );
         updateStep(1, 'done');
       } catch (err: unknown) {
@@ -129,9 +152,11 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
           instruction,
           resumeText,
           jobDescription,
-          [], // no GitHub repos for auto-pipeline
-          undefined,
+          ctx.githubRepos ?? [],
+          ctx.githubData,
           coachingResult,
+          undefined,
+          ctx.companyContext,
         );
         updateStep(2, 'done');
       } catch (err: unknown) {
@@ -149,7 +174,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
       { id: 'ats-score', label: 'ATS 분석' },
       { id: 'practitioner', label: '실무자 시선' },
     ],
-    async run(resumeText, jobDescription, instruction, _coachingResult, updateStep) {
+    async run(resumeText, jobDescription, instruction, _coachingResult, updateStep, ctx) {
       const results: PipelineResults = {};
 
       // Step 1: ATS 분석
@@ -159,6 +184,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
           resumeText,
           jobDescription,
           JSON.stringify(instruction),
+          ctx.companyContext,
         );
         updateStep(0, 'done');
       } catch (err: unknown) {
@@ -190,7 +216,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
       { id: 'interview', label: '면접 질문 생성' },
       { id: 'practitioner', label: '실무자 시선' },
     ],
-    async run(resumeText, jobDescription, instruction, _coachingResult, updateStep) {
+    async run(resumeText, jobDescription, instruction, _coachingResult, updateStep, ctx) {
       const results: PipelineResults = {};
 
       // Step 1: 면접 질문 생성
@@ -200,6 +226,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
           resumeText,
           jobDescription,
           instruction,
+          ctx.companyContext,
         );
         updateStep(0, 'done');
       } catch (err: unknown) {
@@ -231,7 +258,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
       { id: 'linkedin', label: 'LinkedIn 최적화' },
       { id: 'about', label: '한줄소개' },
     ],
-    async run(resumeText, jobDescription, instruction, _coachingResult, updateStep) {
+    async run(resumeText, jobDescription, instruction, _coachingResult, updateStep, ctx) {
       const results: PipelineResults = {};
 
       // Step 1: LinkedIn 최적화
@@ -241,6 +268,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
           resumeText,
           jobDescription,
           instruction,
+          ctx.companyContext,
         );
         updateStep(0, 'done');
       } catch (err: unknown) {
@@ -276,7 +304,8 @@ export async function runPipeline(
   instruction: TailoredInstructionWithRequirements,
   coachingResult: CoachingResult,
   onProgress: (progress: PipelineProgress) => void,
-): Promise<PipelineResults> {
+  ctx: PipelineContext = {},
+): Promise<PipelineRunResult> {
   const definition = PIPELINE_DEFINITIONS[type];
 
   const steps: PipelineStep[] = definition.steps.map((s) => ({
@@ -307,7 +336,9 @@ export async function runPipeline(
     instruction,
     coachingResult,
     updateStep,
+    ctx,
   );
 
-  return results;
+  // 단계별 최종 상태를 함께 반환 → 호출자가 에러 단계 유무로 '완료' 여부를 판단한다.
+  return { results, steps: [...steps] };
 }

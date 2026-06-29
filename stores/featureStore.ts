@@ -73,7 +73,6 @@ interface FeatureState {
   setInterviewQuestions: (result: InterviewQuestion[]) => void;
   setLinkedInResult: (result: LinkedInOptimization) => void;
   setPractitionerResult: (result: PractitionerReview) => void;
-  setAboutStatementResult: (result: AboutStatementResult) => void;
 
   resetAll: () => void;
 }
@@ -128,15 +127,22 @@ export const useFeatureStore = create<FeatureState>((set) => ({
   },
 
   submitInterviewAnswer: async (question, answer, resumeText, jd) => {
-    const feedback = await evaluateAnswer(question, answer, resumeText, jd);
-    set(s => ({
-      interview: {
-        ...s.interview,
-        answers: { ...s.interview.answers, [question.id]: answer },
-        feedbacks: { ...s.interview.feedbacks, [question.id]: feedback },
-      },
-    }));
-    return feedback;
+    set(s => ({ interview: { ...s.interview, error: null } }));
+    try {
+      const feedback = await evaluateAnswer(question, answer, resumeText, jd);
+      set(s => ({
+        interview: {
+          ...s.interview,
+          answers: { ...s.interview.answers, [question.id]: answer },
+          feedbacks: { ...s.interview.feedbacks, [question.id]: feedback },
+        },
+      }));
+      return feedback;
+    } catch (e: unknown) {
+      // 평가 실패를 store error로 노출 — MockInterviewView의 error 블록이 표시한다.
+      set(s => ({ interview: { ...s.interview, error: e instanceof Error ? e.message : String(e) } }));
+      throw e;
+    }
   },
 
   generateSkillGap: async (gapMap, jd, instruction, companyContext) => {
@@ -196,7 +202,6 @@ export const useFeatureStore = create<FeatureState>((set) => ({
   setInterviewQuestions: (result) => set(s => ({ interview: { ...s.interview, result, loading: false, error: null } })),
   setLinkedInResult: (result) => set({ linkedIn: { result, loading: false, error: null } }),
   setPractitionerResult: (result) => set({ practitioner: { result, loading: false, error: null } }),
-  setAboutStatementResult: (result) => set({ aboutStatement: { result, loading: false, error: null } }),
 
   resetAll: () => set({
     careerStatement: initialSlice(),
