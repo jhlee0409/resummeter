@@ -31,3 +31,15 @@ dist-ssr
 *.sln
 *.sw?
 .gstack/
+
+# harness-kit scratch
+scratch/
+
+# tool working dirs (MCP / serena / omc / playwright)
+.omc/
+.serena/
+.playwright-mcp/
+
+# claude-mem auto-generated context files (root CLAUDE.md stays tracked)
+**/CLAUDE.md
+!/CLAUDE.md
