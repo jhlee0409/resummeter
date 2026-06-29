@@ -3,5 +3,5 @@
   "blocking": false,
   "protected_branches": ["main", "master", "develop", "release"],
   "worktree_workflow": false,
-  "pr_workflow": { "host": "github", "ci": null, "merge_gate": null }
+  "pr_workflow": { "host": "github", "ci": "vercel", "merge_gate": null }
 }
