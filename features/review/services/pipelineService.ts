@@ -42,6 +42,8 @@ export interface PipelineResults {
   careerStatements?: any;
   coverLetter?: any;
   narrativeSections?: any;
+  /** 파이프라인이 사용한 서술형 spec — 탭의 '입력 조건'/'다시 설정' 동기화용 */
+  narrativeSpecs?: NarrativeSectionSpec[];
   atsScore?: any;
   interviewQuestions?: any;
   practitionerReview?: any;
@@ -158,6 +160,7 @@ const PIPELINE_DEFINITIONS: Record<PipelineType, PipelineDefinition> = {
           undefined,
           ctx.companyContext,
         );
+        results.narrativeSpecs = autoSpecs; // 탭 '입력 조건'/'다시 설정' 동기화
         updateStep(2, 'done');
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : '서술형 자소서 생성 실패';

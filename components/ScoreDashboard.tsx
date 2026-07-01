@@ -5,7 +5,6 @@ import { LEVEL_LABELS } from '../core/scoring/scoringEngine';
 interface ScoreDashboardProps {
   result: CoachingResult;
   originalData: UserInputData;
-  editedResume: string;
   atsScore?: number | null;
   prevAtsScore?: number | null;
   isLoadingAts?: boolean;
@@ -27,7 +26,7 @@ const BREAKDOWN_COLORS: Record<string, string> = {
   domain: 'bg-purple-400',
 };
 
-export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, originalData, editedResume, atsScore, prevAtsScore, isLoadingAts }) => {
+export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, originalData, atsScore, prevAtsScore, isLoadingAts }) => {
   const [showPenalties, setShowPenalties] = useState(false);
   const scoring = result.scoringResult;
 
@@ -65,7 +64,7 @@ export const ScoreDashboard: React.FC<ScoreDashboardProps> = ({ result, original
             <span className={`text-3xl font-black ${scoreConfig.text} section-num`}>{displayScore}</span>
           </div>
           <div>
-            <p className="text-[11px] text-zinc-400 font-medium">직무 적합도</p>
+            <p className="text-[11px] text-zinc-400 font-medium">직무 적합도 <span className="text-zinc-600">(분석 시점)</span></p>
             <p className={`text-base font-bold ${scoreConfig.text}`}>{scoreConfig.label}</p>
           </div>
         </div>

@@ -11,12 +11,15 @@ interface Props {
   currentResumeText: string;
   currentJobDescription: string;
   currentScore?: number;
+  /** 저장된 버전의 이력서 텍스트를 에디터로 되돌린다 (없으면 복원 버튼 숨김). */
+  onRestore?: (resumeText: string) => void;
 }
 
 export default function VersionManagerView({
   currentResumeText,
   currentJobDescription,
-  currentScore
+  currentScore,
+  onRestore
 }: Props) {
   const [versionName, setVersionName] = useState('');
   const [versions, setVersions] = useState<ResumeVersion[]>([]);
@@ -176,6 +179,16 @@ export default function VersionManagerView({
                     />
                     <h3 className="font-bold text-slate-100">{version.name}</h3>
                   </div>
+                  <div className="flex items-center gap-2">
+                  {onRestore && (
+                    <button
+                      onClick={() => onRestore(version.resumeText)}
+                      className="text-[12px] px-2.5 py-1 rounded-md border border-brand-500/30 text-brand-300 hover:bg-brand-500/10 transition-colors"
+                      title="이 버전을 에디터로 불러오기"
+                    >
+                      불러오기
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDelete(version.id)}
                     className="text-red-400 hover:text-red-300 transition-colors"
@@ -195,6 +208,7 @@ export default function VersionManagerView({
                       />
                     </svg>
                   </button>
+                  </div>
                 </div>
 
                 <p className="text-sm text-slate-400 mb-2">
