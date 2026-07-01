@@ -325,10 +325,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
       {/* Pipeline Panel */}
       <PipelinePanel
-        resumeText={editedResume}
+        resumeText={originalData.resumeText}
         jobDescription={originalData.jobDescription}
         instruction={instruction}
         coachingResult={result}
+        companyContext={originalData.companyContext}
+        githubData={originalData.githubData}
+        githubRepos={originalData.githubRepos}
         onNavigate={(tab) => switchTab(tab as ReviewTab)}
         onRun={(type, results) => {
           if (results.atsScore) setAtsScore(results.atsScore);

@@ -14,6 +14,7 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, wri
 import {
   generateCacheKey,
   getCachedAnalysis,
+  getCachedAnalysisByKey,
   setCachedAnalysis,
   clearAnalysisCache,
   hasCachedAnalysis,
@@ -62,6 +63,25 @@ describe('analysisCache', () => {
       setCachedAnalysis('resume', 'jd', mockInstruction, mockResult, ctx);
       const cached = getCachedAnalysis('resume', 'jd');
       expect(cached!.companyContext?.companyName).toBe('채널톡');
+    });
+  });
+
+  describe('원문 텍스트 복원', () => {
+    it('getCachedAnalysis가 resumeText/jobDescription을 복원', () => {
+      setCachedAnalysis('이력서 원문', 'JD 원문', mockInstruction, mockResult, null);
+      const cached = getCachedAnalysis('이력서 원문', 'JD 원문');
+      expect(cached!.resumeText).toBe('이력서 원문');
+      expect(cached!.jobDescription).toBe('JD 원문');
+    });
+
+    it('getCachedAnalysisByKey가 텍스트까지 복원 (새 탭/cache-key 로드 시나리오)', () => {
+      setCachedAnalysis('이력서 원문', 'JD 원문', mockInstruction, mockResult, null);
+      const key = generateCacheKey('이력서 원문', 'JD 원문');
+      const cached = getCachedAnalysisByKey(key);
+      expect(cached).not.toBeNull();
+      expect(cached!.resumeText).toBe('이력서 원문');
+      expect(cached!.jobDescription).toBe('JD 원문');
+      expect(cached!.result.matchScore).toBe(85);
     });
   });
 

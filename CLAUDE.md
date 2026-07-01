@@ -29,12 +29,11 @@ pnpm preview         # 빌드 결과 미리보기
   - `UploadStep`: 이력서 텍스트, JD, GitHub 레포 목록 입력
   - `AnalysisStep`: 분석 중 로딩 UI
   - `ReviewStep`: 최적화된 이력서와 인사이트 표시
-- **Gemini 서비스**: 5개 서비스 파일에 14개 AI 프롬프트
-  - `geminiService.ts`: JD분석(Flash), 이력서분석(Pro), 코칭생성(Pro), 에비던스매칭(Flash), 서술형생성(Flash)
-  - `atsService.ts`: ATS점수(Flash), 상세점수(Pro)
-  - `careerDocService.ts`: 경력기술서(Pro), 커버레터(Pro), 한줄소개(Pro)
-  - `interviewService.ts`: 면접질문(Pro), 답변평가(Flash)
-  - `skillGapService.ts`: 학습경로(Flash), LinkedIn(Pro)
+- **Gemini 서비스**: 기능별로 분리된 ~19개 AI 프롬프트 함수 (리팩토링 후 `services/` 단일 디렉터리는 제거됨)
+  - `core/analysis/`: JD분석(`jdAnalysis.ts`), 이력서분석(`resumeAnalysis.ts`), 코칭생성(`coaching.ts`), 에비던스매칭/해석(`evidenceBank.ts`)
+  - `core/research/`: 회사·직무 리서치(`companyResearch.ts`, Google Search grounding)
+  - `features/*/service.ts`: ats-score(ATS/상세점수), career-statement(경력기술서), cover-letter(커버레터), about-statement(한줄소개), interview(면접질문/답변평가), skill-gap(학습경로), linkedin, narrative(서술형), practitioner(실무자시선), gap-analysis(역량갭)
+  - `shared/api/geminiClient.ts`: 중앙 `getAI()`, 모델 티어, 세션 Context Caching 인프라
 - **UI 프레임워크**: Radix UI 기반 (`@radix-ui/react-collapsible`, `react-dropdown-menu`, `react-select`, `react-tabs`, `react-progress`) + `sonner` 토스트
 - **스타일링**: Tailwind CSS v3 (로컬 PostCSS). `app.css`에 커스텀 유틸리티 클래스 정의. `tailwind.config.ts`에 테마 설정.
 - **shadcn/ui**: 초기화 완료 (`components.json`, `lib/utils.ts`). `cn()` 유틸리티 사용 가능. `tailwindcss-animate`, `class-variance-authority`, `clsx`, `tailwind-merge` 설치됨.
@@ -42,11 +41,11 @@ pnpm preview         # 빌드 결과 미리보기
 - **PDF 파싱**: `pdfjs-dist` (이력서 PDF 업로드 지원용)
 - **ReviewStep**: 2단 네비게이션 (5그룹: 핵심분석/지원서작성/면접준비/개인브랜딩/부가기능). 서술형 결과 → 이력서 삽입 기능.
 - **이력서 템플릿**: `data/templates.ts`에 8종 (IT/금융/제조/공공 × 신입/경력). UploadStep에서 선택.
-- **합격 사례 DB**: `data/examples.ts`에 9건 업종별 합격 자소서 패턴. ExampleBrowserView로 조회.
-- **분석 로그**: `services/analytics.ts`에 16개 이벤트 타입. localStorage 저장, 향후 Amplitude/Posthog 연동 가능.
-- **회사 컨텍스트**: `services/companyResearchService.ts`. Gemini Google Search grounding으로 회사 정보 자동 수집. `CompanyContext` 타입.
-- **역량 갭 분석**: `services/gapAnalysisService.ts`. 이력서 vs JD+회사컨텍스트 역량 매칭/갭 정밀 분석. `GapAnalysisView` 컴포넌트.
-- **Scoring Engine**: `services/scoringEngine.ts`. 규칙 기반 100점 감점 모델. LLM은 분석만, 점수는 엔진이 계산.
+- **합격 사례 DB**: `data/examples.ts`에 13건 업종별 합격 자소서 패턴. ExampleBrowserView로 조회.
+- **분석 로그**: `shared/lib/analytics.ts`에 17개 이벤트 타입. localStorage 저장, 향후 Amplitude/Posthog 연동 가능.
+- **회사 컨텍스트**: `core/research/companyResearch.ts`. Gemini Google Search grounding으로 회사 정보 자동 수집. `CompanyContext` 타입.
+- **역량 갭 분석**: `features/gap-analysis/service.ts`. 이력서 vs JD+회사컨텍스트 역량 매칭/갭 정밀 분석. `GapAnalysisView` 컴포넌트.
+- **Scoring Engine**: `core/scoring/scoringEngine.ts`. 규칙 기반 100점 감점 모델. LLM은 분석만, 점수는 엔진이 계산.
   - 1단계: Hard Requirement (경력/학력) — JD 필수/우대 구분 반영
   - 2단계: gapMap 카테고리별 감점 — JD importance로 가중치 동적 조절 (0.5~1.0)
   - 3단계: 도메인 키워드 시맨틱 매칭 — `keywordAliases`로 동의어/관련 기술 매칭
@@ -55,14 +54,14 @@ pnpm preview         # 빌드 결과 미리보기
 
 ## 프롬프트 엔지니어링
 
-모든 14개 Gemini 프롬프트에 적용된 공통 원칙:
+모든 Gemini 프롬프트(~19개)에 적용된 공통 원칙:
 
 ### 보안
 - **프롬프트 인젝션 방어**: 모든 사용자 입력을 `<user-resume>`, `<user-jd>`, `<user-input>` XML 태그로 격리. `[보안 규칙]` 블록으로 데이터 안의 지시문 무시 지시.
 
 ### Grounding & 할루시네이션 방지
 - **Grounding 규칙**: 제공된 데이터만 사용, 외부 지식 추론 금지
-- **Self-verification (CoVe)**: 모든 14개 프롬프트에 자기검증 체크리스트 적용. ATS/상세점수/실무자시선/LinkedIn에 추가 (04-11)
+- **Self-verification (CoVe)**: 모든 프롬프트에 자기검증 체크리스트 적용. ATS/상세점수/실무자시선/LinkedIn에 추가 (04-11)
 - **입력 품질 가드**: 이력서 100자 미만, JD 50자 미만일 때 분석 거부
 
 ### 이력서 활용
@@ -83,20 +82,20 @@ pnpm preview         # 빌드 결과 미리보기
 - 추상적 미사여구/과도한 열정 표현 금지
 
 ### 프롬프트 토큰 압축 (적용 완료)
-- `services/promptBlocks.ts`: 7개 공통 블록(보안, 그라운딩, 이력서 우선순위, AI탐지, HR관점, 수치화, JD포맷) 상수로 추출
-- `services/promptCache.ts`: 중앙화된 `getAI()`, 세션별 Context Caching 인프라 (`ai.caches.create`)
-- 모든 14개 프롬프트에서 반복 블록 제거 → `systemInstruction` 파라미터로 분리
+- `shared/prompt/promptBlocks.ts`: 공통 블록(보안, 그라운딩, 이력서 우선순위, AI탐지, HR관점, JD포맷 `formatInstruction`/`formatInstructionCriteria`) 상수/헬퍼로 추출
+- `shared/api/geminiClient.ts`: 중앙화된 `getAI()`, 세션별 Context Caching 인프라 (`ai.caches.create`)
+- 모든 프롬프트에서 반복 블록 제거 → `systemInstruction` 파라미터로 분리
 - 결과: 프롬프트당 ~280 토큰 절감, 코드 중복 ~2,600 토큰 제거
 
 ### Context Caching (적용 완료)
 - `systemInstruction`: 보안+그라운딩+이력서 우선순위 블록을 모든 API 호출에 systemInstruction으로 분리
-- `promptCache.ts`: Gemini `ai.caches.create()` 기반 세션 캐시 (이력서+JD+instruction, TTL 30분)
+- `shared/api/geminiClient.ts`: Gemini `ai.caches.create()` 기반 세션 캐시 (이력서+JD+instruction, TTL 30분)
 - 캐시 생성 실패 시 자동 인라인 폴백 (systemInstruction + contents)
 
 ### Thinking Level (적용 완료, 04-11)
 - Pro 모델 (8개 호출): `ThinkingLevel.HIGH` — 복잡한 분석/생성에 extended thinking
 - Flash 모델 (6개 호출): `ThinkingLevel.MEDIUM` — 빠른 처리에 적절한 추론
-- Temperature 일관화: 분석=0.2, 생성=0.3 (14개 전부 설정)
+- Temperature 일관화: 분석=0.2, 생성=0.3 (전 프롬프트 설정)
 
 ### Few-shot 예시 (적용 완료, 04-11)
 - ATS 키워드 분석: GOOD/BAD 키워드 매칭 예시
@@ -155,7 +154,7 @@ plugin; this block only adds the repo-specific layer. A re-run replaces this blo
 
 ### Test discipline
 - Runner: **Vitest** — `pnpm test` (`vitest run`), jsdom + Testing Library.
-- Tests-first for non-trivial changes; a behavior change ships with the test that proves it. Scoring/parsing logic (`services/scoringEngine.ts`, prompt post-processing) is the natural home for unit tests.
+- Tests-first for non-trivial changes; a behavior change ships with the test that proves it. Scoring/parsing logic (`core/scoring/scoringEngine.ts`, prompt post-processing) is the natural home for unit tests.
 
 ### Workflow
 - **Specs.** Non-trivial work (≥2 modules / ≥3 commits / a new ADR) → `/harness-kit:new-spec <name>`. Small work skips it.

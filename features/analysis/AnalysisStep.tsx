@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import * as Progress from '@radix-ui/react-progress';
 
+// 주: GitHub 근거 매칭은 코칭 단계와 병렬로 실행되므로 별도 순차 단계로 표시하지 않는다
+// (예전에는 절대 활성화되지 않아 GitHub 입력 시 진행바가 ~62%에서 멈춰 보였다).
 const analysisStages = [
   { key: 'jd-analysis', label: "채용 공고 분석 중", detail: "JD에서 핵심 요구사항과 기술 스택 추출", icon: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" },
   { key: 'resume-analysis', label: "이력서 분석 중", detail: "이력서와 JD를 대조 분석하고 있습니다", icon: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
   { key: 'coaching', label: "코칭 제안 생성 중", detail: "근거 기반 수정 제안을 생성하고 있습니다", icon: "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" },
-  { key: 'evidence-matching', label: "GitHub 근거 매칭 중", detail: "GitHub 활동에서 JD 연관 근거를 추출합니다", icon: "M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" },
 ];
 
 const tips = [
@@ -18,12 +19,12 @@ const tips = [
 ];
 
 interface AnalysisStepProps {
-  stage: 'jd-analysis' | 'resume-analysis' | 'coaching' | 'evidence-matching';
+  stage: 'jd-analysis' | 'resume-analysis' | 'coaching';
   hasGithub?: boolean;
 }
 
 export const AnalysisStep: React.FC<AnalysisStepProps> = ({ stage, hasGithub = false }) => {
-  const visibleStages = hasGithub ? analysisStages : analysisStages.filter(s => s.key !== 'evidence-matching');
+  const visibleStages = analysisStages;
   const currentStage = visibleStages.findIndex(s => s.key === stage);
   const [tipIndex, setTipIndex] = useState(0);
   const [tipFade, setTipFade] = useState(true);

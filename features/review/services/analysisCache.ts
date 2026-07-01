@@ -6,7 +6,9 @@
 import type { CoachingResult, TailoredInstructionWithRequirements, CompanyContext } from '../../../types';
 
 const STORAGE_KEY = 'resummeter_analysis_cache';
-const CACHE_VERSION = 1;
+// v2: 원문 resumeText/jobDescription을 저장하도록 스키마 확장.
+// getAllEntries가 version 불일치 항목을 버리므로 텍스트 없는 v1 항목은 자동 폐기된다.
+const CACHE_VERSION = 2;
 const MAX_ENTRIES = 10;
 
 interface CachedAnalysis {
@@ -16,8 +18,19 @@ interface CachedAnalysis {
   result: CoachingResult;
   companyContext: CompanyContext | null;
   createdAt: string;
+  resumeText: string;
+  jobDescription: string;
   resumeLength: number;
   jdLength: number;
+}
+
+/** 캐시에서 복원되는 분석 결과 (원문 텍스트 포함) */
+export interface RestoredAnalysis {
+  instruction: TailoredInstructionWithRequirements;
+  result: CoachingResult;
+  companyContext: CompanyContext | null;
+  resumeText: string;
+  jobDescription: string;
 }
 
 export function generateCacheKey(resume: string, jd: string): string {
@@ -63,7 +76,7 @@ function saveAllEntries(entries: CachedAnalysis[]) {
 export function getCachedAnalysis(
   resume: string,
   jd: string,
-): { instruction: TailoredInstructionWithRequirements; result: CoachingResult; companyContext: CompanyContext | null } | null {
+): RestoredAnalysis | null {
   const key = generateCacheKey(resume, jd);
   const entries = getAllEntries();
   const match = entries.find(
@@ -77,11 +90,7 @@ export function getCachedAnalysis(
   updated.push({ ...match, createdAt: new Date().toISOString() });
   saveAllEntries(updated);
 
-  return {
-    instruction: match.instruction,
-    result: match.result,
-    companyContext: match.companyContext,
-  };
+  return toRestored(match);
 }
 
 export function setCachedAnalysis(
@@ -101,6 +110,8 @@ export function setCachedAnalysis(
     result,
     companyContext,
     createdAt: new Date().toISOString(),
+    resumeText: resume,
+    jobDescription: jd,
     resumeLength: resume.length,
     jdLength: jd.length,
   });
@@ -151,18 +162,24 @@ export function listCachedAnalyses(): CachedAnalysisListItem[] {
     }));
 }
 
-/** 캐시 키로 직접 로드 (이력서/JD 없어도 가능) */
-export function getCachedAnalysisByKey(cacheKey: string): { instruction: TailoredInstructionWithRequirements; result: CoachingResult; companyContext: CompanyContext | null } | null {
+/** 캐시 키로 직접 로드 (이력서/JD 텍스트까지 복원) */
+export function getCachedAnalysisByKey(cacheKey: string): RestoredAnalysis | null {
   const entries = getAllEntries();
   const match = entries.find(e => e.cacheKey === cacheKey);
   if (!match) return null;
   const updated = entries.filter(e => e.cacheKey !== cacheKey);
   updated.push({ ...match, createdAt: new Date().toISOString() });
   saveAllEntries(updated);
+  return toRestored(match);
+}
+
+function toRestored(match: CachedAnalysis): RestoredAnalysis {
   return {
     instruction: match.instruction,
     result: match.result,
     companyContext: match.companyContext,
+    resumeText: match.resumeText,
+    jobDescription: match.jobDescription,
   };
 }
 

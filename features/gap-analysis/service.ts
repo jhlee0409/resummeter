@@ -8,7 +8,7 @@ import { getAI, MODELS } from '../../shared/api/geminiClient';
 import { withRetry } from '../../shared/api/retry';
 import { validateResumeInput, validateJDInput, safeParseJSON } from '../../shared/lib/validation';
 import { classifyError } from '../../shared/lib/errors';
-import { GROUNDING_FULL, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS, buildSystemPrompt } from '../../shared/prompt/promptBlocks';
+import { GROUNDING_FULL, AI_DETECTION_KO_BASE, HR_PERSPECTIVE_ANALYSIS, buildSystemPrompt, formatInstructionCriteria } from '../../shared/prompt/promptBlocks';
 import { formatCompanyContext } from '../../core/research/companyResearch';
 import type { CompanyContext, GapAnalysisResult, GapMatch, TailoredInstructionWithRequirements } from '../../types';
 
@@ -31,10 +31,7 @@ ${jobDescription}
 </user-jd>
 
 # JD 구조화 결과
-- 필수 키워드: ${instruction.keywords.join(', ')}
-- Hard Skills: ${instruction.evaluationCriteria.hardSkills.join(', ')}
-- Soft Skills: ${instruction.evaluationCriteria.softSkills.join(', ')}
-- 우대 경험: ${instruction.evaluationCriteria.preferredExperience.join(', ')}
+${formatInstructionCriteria(instruction)}
 
 ${companyBlock}
 

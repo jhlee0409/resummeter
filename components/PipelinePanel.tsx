@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { TailoredInstructionWithRequirements, CoachingResult } from '../types';
+import type { TailoredInstructionWithRequirements, CoachingResult, CompanyContext, GitHubFetchResult, GithubRepo } from '../types';
 import {
   runPipeline,
   type PipelineType,
@@ -15,13 +15,17 @@ interface PipelinePanelProps {
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
   coachingResult: CoachingResult;
+  // grounding — 탭별 생성 버튼과 동일한 컨텍스트를 파이프라인에도 전달
+  companyContext?: CompanyContext | null;
+  githubData?: GitHubFetchResult[];
+  githubRepos?: GithubRepo[];
 }
 
 // Maps pipeline results to navigable summary cards
 interface ResultCard {
   label: string;
   tab: string;
-  status: 'done' | 'error';
+  status: 'done' | 'error' | 'manual';
   detail: string;
 }
 
@@ -43,7 +47,8 @@ function getResultCards(type: PipelineType, results: PipelineResults): ResultCar
       break;
     case 'personal-branding':
       if (results.linkedinOptimization) cards.push({ label: 'LinkedIn', tab: 'linkedin', status: 'done', detail: '프로필 최적화 완료' });
-      cards.push({ label: '한줄소개', tab: 'about-statement', status: 'done', detail: '직접 입력 후 고도화' });
+      // 한줄소개는 자동 생성하지 않음 — 사용자 초안 입력이 필요하므로 'manual'로 안내한다.
+      cards.push({ label: '한줄소개', tab: 'about-statement', status: 'manual', detail: '직접 입력 필요' });
       break;
   }
   return cards;
@@ -186,6 +191,9 @@ export function PipelinePanel({
   jobDescription,
   instruction,
   coachingResult,
+  companyContext,
+  githubData,
+  githubRepos,
 }: PipelinePanelProps) {
   const [runningType, setRunningType] = useState<PipelineType | null>(null);
   const [progress, setProgress] = useState<PipelineProgress | null>(null);
@@ -193,26 +201,41 @@ export function PipelinePanel({
     new Set(),
   );
   const [pipelineResults, setPipelineResults] = useState<Record<string, PipelineResults>>({});
+  // 단계가 하나라도 실패하면 최종 step 상태를 보존 → 빨간 에러 인디케이터가 사라지지 않게.
+  const [errorSteps, setErrorSteps] = useState<Partial<Record<PipelineType, PipelineStep[]>>>({});
 
   const handleRun = async (type: PipelineType) => {
     if (runningType) return; // prevent concurrent runs
 
     setRunningType(type);
     setProgress(null);
+    setErrorSteps((prev) => {
+      const next = { ...prev };
+      delete next[type];
+      return next;
+    });
 
     try {
-      const results = await runPipeline(
+      const { results, steps } = await runPipeline(
         type,
         resumeText,
         jobDescription,
         instruction,
         coachingResult,
         (p) => setProgress(p),
+        { companyContext, githubData, githubRepos },
       );
 
-      setCompletedTypes((prev) => new Set([...prev, type]));
+      const hasError = steps.some((s) => s.status === 'error');
       setPipelineResults((prev) => ({ ...prev, [type]: results }));
-      onRun(type, results);
+      onRun(type, results); // 성공한 단계 결과는 그대로 store에 반영
+
+      if (hasError) {
+        // '완료' 처리하지 않고 실패 단계를 계속 노출 (사용자가 재시도 가능)
+        setErrorSteps((prev) => ({ ...prev, [type]: steps }));
+      } else {
+        setCompletedTypes((prev) => new Set([...prev, type]));
+      }
     } catch (err) {
       console.error('Pipeline failed:', err);
     } finally {
@@ -331,25 +354,41 @@ export function PipelinePanel({
                   currentProgress.steps.map((step) => (
                     <StepIndicator key={step.id} step={step} />
                   ))
+                ) : errorSteps[card.type] ? (
+                  <div className="space-y-1.5">
+                    {errorSteps[card.type]!.map((step) => (
+                      <StepIndicator key={step.id} step={step} />
+                    ))}
+                    <p className="text-[10px] text-red-400/70 pt-0.5">일부 단계 실패 — 다시 클릭해 재시도</p>
+                  </div>
                 ) : completed && pipelineResults[card.type] ? (
                   <div className="space-y-1.5">
-                    {getResultCards(card.type, pipelineResults[card.type]).map((rc) => (
+                    {getResultCards(card.type, pipelineResults[card.type]).map((rc) => {
+                      const manual = rc.status === 'manual';
+                      return (
                       <button
                         key={rc.tab}
                         type="button"
                         onClick={(e) => { e.stopPropagation(); onNavigate?.(rc.tab); }}
-                        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-emerald-500/5 border border-emerald-500/10 hover:bg-emerald-500/10 transition-colors text-left"
+                        className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg border transition-colors text-left ${manual ? 'bg-amber-500/5 border-amber-500/15 hover:bg-amber-500/10' : 'bg-emerald-500/5 border-emerald-500/10 hover:bg-emerald-500/10'}`}
                       >
-                        <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                        <span className="text-[11px] font-semibold text-emerald-300">{rc.label}</span>
+                        {manual ? (
+                          <svg className="w-3.5 h-3.5 text-amber-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        ) : (
+                          <svg className="w-3.5 h-3.5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        <span className={`text-[11px] font-semibold ${manual ? 'text-amber-300' : 'text-emerald-300'}`}>{rc.label}</span>
                         <span className="text-[10px] text-zinc-500 ml-auto">{rc.detail}</span>
                         <svg className="w-3 h-3 text-zinc-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="flex items-center justify-center py-2">
