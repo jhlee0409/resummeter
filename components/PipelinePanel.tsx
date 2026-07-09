@@ -11,6 +11,8 @@ import {
 interface PipelinePanelProps {
   onRun: (type: PipelineType, results: PipelineResults) => void;
   onNavigate?: (tab: string) => void;
+  /** 실행 전 확인 훅 — false를 반환하면 실행을 취소한다 (예: 답변한 면접 덮어쓰기 경고). */
+  confirmRun?: (type: PipelineType) => boolean;
   resumeText: string;
   jobDescription: string;
   instruction: TailoredInstructionWithRequirements;
@@ -187,6 +189,7 @@ function StepIndicator({ step }: { step: PipelineStep }) {
 export function PipelinePanel({
   onRun,
   onNavigate,
+  confirmRun,
   resumeText,
   jobDescription,
   instruction,
@@ -206,6 +209,7 @@ export function PipelinePanel({
 
   const handleRun = async (type: PipelineType) => {
     if (runningType) return; // prevent concurrent runs
+    if (confirmRun && !confirmRun(type)) return; // 사용자 취소
 
     setRunningType(type);
     setProgress(null);

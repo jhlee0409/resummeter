@@ -336,6 +336,18 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
         githubData={originalData.githubData}
         githubRepos={originalData.githubRepos}
         onNavigate={(tab) => switchTab(tab as ReviewTab)}
+        confirmRun={(type) => {
+          // 면접 준비 파이프라인은 질문을 재생성하므로 기존 답변/피드백이 초기화된다.
+          if (type === 'interview-prep') {
+            const answered = Object.keys(useFeatureStore.getState().interview.feedbacks).length;
+            if (answered > 0) {
+              return window.confirm(
+                `이미 답변한 면접 질문 ${answered}개가 있습니다.\n새 질문을 생성하면 기존 답변과 피드백이 모두 초기화됩니다.\n계속할까요?`
+              );
+            }
+          }
+          return true;
+        }}
         onRun={(type, results) => {
           if (results.atsScore) {
             setPrevAtsScore(atsScore?.overall ?? null);
