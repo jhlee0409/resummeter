@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as Tabs from '@radix-ui/react-tabs';
 import * as Progress from '@radix-ui/react-progress';
 import { TailoredInstructionWithRequirements, InterviewQuestion, InterviewFeedback, CompanyContext } from "../../types";
@@ -32,9 +32,20 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [activeTab, setActiveTab] = useState<'technical' | 'behavioral'>('technical');
 
-  // ── Sync store → local step ──
+  // ── Sync store → local ──
+  // 새 질문 세트(직접 생성 또는 '면접 준비' 파이프라인)가 들어오면 로컬 진행 상태를 초기화한다.
+  // store의 answers/feedbacks는 setInterviewQuestions에서 이미 비워지므로, 로컬 진행위치·피드백·
+  // 미제출 초안이 남아 새 질문에 옛 피드백이 붙는 desync를 막는다. (마운트 시에는 발동하지 않음)
+  const prevQuestionsRef = useRef(questions);
   useEffect(() => {
-    if (questions && questions.length > 0 && step === 'generating') setStep('answering');
+    if (questions && questions !== prevQuestionsRef.current) {
+      setCurrentQuestionIndex(0);
+      setUserAnswer("");
+      setFeedback(null);
+      setShowStarGuide(false);
+      setStep('answering');
+    }
+    prevQuestionsRef.current = questions;
   }, [questions]);
   useEffect(() => {
     if (isGenerating && step === 'idle') setStep('generating');
