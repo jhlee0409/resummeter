@@ -52,10 +52,6 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const [activeTab, setActiveTab] = useState<ReviewTab>('gap-map');
   const [visitedTabs, setVisitedTabs] = useState<Set<ReviewTab>>(new Set(['gap-map']));
 
-  const handleTabChange = (tab: ReviewTab) => {
-    setActiveTab(tab);
-    setVisitedTabs(prev => new Set(prev).add(tab));
-  };
   const [editedResume, setEditedResume] = useState(result.optimizedResume);
   const [resumeSubTab, setResumeSubTab] = useState<'editor' | 'preview' | 'diff'>('editor');
   const [copied, setCopied] = useState(false);
@@ -106,7 +102,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     setIsGeneratingNarrative(true);
     try {
       const narrativeGenResult = await generateNarrativeSections(
-        narrativeSpecs, instruction, originalData.resumeText,
+        narrativeSpecs, instruction, editedResume,
         originalData.jobDescription, originalData.githubRepos,
         originalData.githubData, result,
         (completed, total) => setNarrativeProgress({ completed, total }),
@@ -124,7 +120,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     track({ type: 'ats_analyze' });
     setIsLoadingAts(true);
     try {
-      const score = await analyzeAtsScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
+      const score = await analyzeAtsScore(editedResume, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
       setAtsScore(score);
     } catch (e) { console.error(e); }
     finally { setIsLoadingAts(false); }
@@ -135,7 +131,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     track({ type: 'detailed_score_analyze' });
     setIsLoadingDetailed(true);
     try {
-      const score = await analyzeDetailedScore(originalData.resumeText, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
+      const score = await analyzeDetailedScore(editedResume, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
       setDetailedScore(score);
     } catch (e) { console.error(e); }
     finally { setIsLoadingDetailed(false); }
@@ -146,28 +142,30 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     const action = result.actionItems.find(a => a.id === actionId);
     if (!action) return;
 
+    const isAccepting = !acceptedActions.has(actionId);
+
+    // no-op 가드: before→after 액션인데 원본 문장이 이미 사라진 경우 '적용'으로 카운트하지 않음
+    // (side-effect를 setState 업데이터 밖에서 처리 — StrictMode 이중 실행 회피)
+    if (isAccepting && action.before && action.after && !editedResume.includes(action.before)) {
+      toast.error('원본 문장을 찾지 못해 적용하지 않았습니다 (이미 수정됨)');
+      return;
+    }
+
+    track({ type: 'coaching_apply', actionId, accepted: isAccepting });
     setAcceptedActions(prev => {
       const next = new Set(prev);
-      const isAccepting = !next.has(actionId);
       isAccepting ? next.add(actionId) : next.delete(actionId);
-      track({ type: 'coaching_apply', actionId, accepted: isAccepting });
-
-      // Apply or revert the action's before→after replacement in the resume
-      if (action.before && action.after) {
-        setEditedResume(current => {
-          const updated = isAccepting
-            ? (current.includes(action.before) ? current.replace(action.before, action.after) : current)
-            : (current.includes(action.after) ? current.replace(action.after, action.before) : current);
-
-          // Trigger ATS re-analysis if score exists
-          if (atsScore) triggerAtsReanalysis(updated);
-
-          return updated;
-        });
-      }
-
       return next;
     });
+
+    // Apply or revert the action's before→after replacement in the resume
+    if (action.before && action.after) {
+      const updated = isAccepting
+        ? (editedResume.includes(action.before) ? editedResume.replace(action.before, action.after) : editedResume)
+        : (editedResume.includes(action.after) ? editedResume.replace(action.after, action.before) : editedResume);
+      setEditedResume(updated);
+      if (atsScore) triggerAtsReanalysis(updated); // 점수 있으면 편집 반영 재채점
+    }
   };
 
   const handleDownload = () => {
@@ -274,6 +272,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const switchTab = (tab: ReviewTab) => {
     if (tab !== activeTab) track({ type: 'tab_switch', from: activeTab, to: tab });
     setActiveTab(tab);
+    setVisitedTabs(prev => new Set(prev).add(tab)); // keep-alive: 방문한 탭은 마운트 유지
     const group = tabToGroup[tab];
     if (group) setActiveGroup(group);
   };
@@ -282,7 +281,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     setActiveGroup(groupKey);
     const group = tabGroups.find(g => g.key === groupKey);
     if (group && group.tabs.length > 0 && !group.tabs.some(t => t.key === activeTab)) {
-      setActiveTab(group.tabs[0].key);
+      const first = group.tabs[0].key;
+      setActiveTab(first);
+      setVisitedTabs(prev => new Set(prev).add(first));
     }
   };
 
@@ -294,7 +295,9 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
   const handleInsertNarrative = (title: string, content: string) => {
     track({ type: 'narrative_insert_resume', title });
     const section = `\n\n## ${title}\n\n${content}`;
-    setEditedResume(prev => prev + section);
+    const next = editedResume + section;
+    setEditedResume(next);
+    if (atsScore) triggerAtsReanalysis(next); // 삽입도 편집이므로 ATS 재채점
     toast.success(`"${title}" 이력서에 삽입됨`);
     switchTab('resume');
   };
@@ -321,11 +324,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       )}
 
       {/* Score Dashboard */}
-      <ScoreDashboard result={result} originalData={originalData} editedResume={editedResume} atsScore={atsScore?.overall ?? null} prevAtsScore={prevAtsScore} isLoadingAts={isLoadingAts} />
+      <ScoreDashboard result={result} originalData={originalData} atsScore={atsScore?.overall ?? null} prevAtsScore={prevAtsScore} isLoadingAts={isLoadingAts} />
 
       {/* Pipeline Panel */}
       <PipelinePanel
-        resumeText={originalData.resumeText}
+        resumeText={editedResume}
         jobDescription={originalData.jobDescription}
         instruction={instruction}
         coachingResult={result}
@@ -334,7 +337,10 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
         githubRepos={originalData.githubRepos}
         onNavigate={(tab) => switchTab(tab as ReviewTab)}
         onRun={(type, results) => {
-          if (results.atsScore) setAtsScore(results.atsScore);
+          if (results.atsScore) {
+            setPrevAtsScore(atsScore?.overall ?? null);
+            setAtsScore(results.atsScore);
+          }
           if (results.careerStatements) {
             useFeatureStore.getState().setCareerStatementResult(results.careerStatements);
             switchTab('career-statement');
@@ -345,6 +351,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
           }
           if (results.narrativeSections) {
             setNarrativeResult(results.narrativeSections);
+            if (results.narrativeSpecs) setNarrativeSpecs(results.narrativeSpecs);
             switchTab('narrative');
           }
           if (results.interviewQuestions) {
@@ -411,7 +418,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 <GapAnalysisView
-                  resumeText={originalData.resumeText}
+                  resumeText={editedResume}
                   jobDescription={originalData.jobDescription}
                   instruction={instruction}
                   companyContext={originalData.companyContext}
@@ -524,7 +531,18 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 {atsScore ? (
-                  <AtsScoreView atsScore={atsScore} />
+                  <div className="space-y-3">
+                    <div className="flex justify-end">
+                      <button
+                        onClick={handleAnalyzeAts}
+                        disabled={isLoadingAts}
+                        className="text-[12px] px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:bg-white/5 disabled:opacity-50 transition-colors"
+                      >
+                        {isLoadingAts ? '재분석 중...' : '현재 이력서로 재분석'}
+                      </button>
+                    </div>
+                    <AtsScoreView atsScore={atsScore} />
+                  </div>
                 ) : (
                   <div className="text-center py-12">
                     <button
@@ -566,7 +584,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 <CareerStatementView
-                  resumeText={originalData.resumeText}
+                  resumeText={editedResume}
                   jobDescription={originalData.jobDescription}
                   instruction={instruction}
                   githubData={originalData.githubData}
@@ -577,11 +595,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
           )}
 
           {/* Cover Letter Tab */}
-          {activeTab === 'cover-letter' && (
+          {/* keep-alive: 방문 후 마운트 유지 → 설정/초안 보존 */}
+          {visitedTabs.has('cover-letter') && (
+            <div className={activeTab === 'cover-letter' ? '' : 'hidden'}>
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 <CoverLetterView
-                  resumeText={originalData.resumeText}
+                  resumeText={editedResume}
                   jobDescription={originalData.jobDescription}
                   instruction={instruction}
                   coachingResult={result}
@@ -589,20 +609,23 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 />
               </Suspense>
             </ErrorBoundary>
+            </div>
           )}
 
-          {/* Interview Tab */}
-          {activeTab === 'interview' && (
+          {/* Interview Tab — keep-alive: 진행위치/미제출 답변 초안 보존 */}
+          {visitedTabs.has('interview') && (
+            <div className={activeTab === 'interview' ? '' : 'hidden'}>
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 <MockInterviewView
-                  resumeText={originalData.resumeText}
+                  resumeText={editedResume}
                   jobDescription={originalData.jobDescription}
                   instruction={instruction}
                   companyContext={originalData.companyContext}
                 />
               </Suspense>
             </ErrorBoundary>
+            </div>
           )}
 
           {/* Skill Gap Tab */}
@@ -624,7 +647,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 <LinkedInOptView
-                  resumeText={originalData.resumeText}
+                  resumeText={editedResume}
                   jobDescription={originalData.jobDescription}
                   instruction={instruction}
                   companyContext={originalData.companyContext}
@@ -649,7 +672,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 <VersionManagerView
                   currentResumeText={editedResume}
                   currentJobDescription={originalData.jobDescription}
-                  currentScore={result.matchScore}
+                  currentScore={atsScore?.overall}
+                  onRestore={(text) => { setEditedResume(text); toast.success('이 버전을 에디터로 불러왔습니다'); switchTab('resume'); }}
                 />
               </Suspense>
             </ErrorBoundary>
@@ -660,7 +684,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 <PractitionerSimView
-                  resumeText={originalData.resumeText}
+                  resumeText={editedResume}
                   jobDescription={originalData.jobDescription}
                   instruction={instruction}
                 />
@@ -669,11 +693,13 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
           )}
 
           {/* About Statement Tab */}
-          {activeTab === 'about-statement' && (
+          {/* keep-alive: 한줄소개 입력 초안 보존 */}
+          {visitedTabs.has('about-statement') && (
+            <div className={activeTab === 'about-statement' ? '' : 'hidden'}>
             <ErrorBoundary>
               <Suspense fallback={<TabLoading />}>
                 <AboutStatementView
-                  resumeText={originalData.resumeText}
+                  resumeText={editedResume}
                   jobDescription={originalData.jobDescription}
                   instruction={instruction}
                   coachingResult={result}
@@ -681,6 +707,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                 />
               </Suspense>
             </ErrorBoundary>
+            </div>
           )}
 
           {/* Resume Tab */}
@@ -736,7 +763,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
                     <textarea
                       className="flex-1 w-full p-4 text-sm text-zinc-200 leading-relaxed resize-none focus:outline-none bg-transparent custom-scrollbar"
                       value={editedResume}
-                      onChange={(e) => setEditedResume(e.target.value)}
+                      onChange={(e) => { const v = e.target.value; setEditedResume(v); if (atsScore) triggerAtsReanalysis(v); }}
                     />
                   ) : resumeSubTab === 'preview' ? (
                     <div
