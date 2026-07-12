@@ -3,6 +3,7 @@ import * as Tabs from '@radix-ui/react-tabs';
 import * as Progress from '@radix-ui/react-progress';
 import { TailoredInstructionWithRequirements, InterviewQuestion, InterviewFeedback, CompanyContext } from "../../types";
 import { useFeatureStore } from "../../stores/featureStore";
+import { toast } from 'sonner';
 
 interface MockInterviewViewProps {
   resumeText: string;
@@ -73,7 +74,7 @@ export default function MockInterviewView({ resumeText, jobDescription, instruct
 
   const handleSubmitAnswer = async () => {
     if (!currentQuestion || !userAnswer.trim()) {
-      alert("답변을 입력해주세요.");
+      toast.error("답변을 입력해주세요.");
       return;
     }
 

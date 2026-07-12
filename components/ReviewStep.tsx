@@ -15,6 +15,7 @@ import type { PipelineResults } from '../features/review/services/pipelineServic
 import { analyzeAtsScore, analyzeDetailedScore } from '../features/ats-score/service';
 import { track } from '../shared/lib/analytics';
 import { printAsPdf, downloadAsWord } from '../shared/lib/exportDocument';
+import { notifyError } from '../shared/lib/notify';
 import { toast } from 'sonner';
 import type { AtsScore, DetailedScore } from '../types';
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary';
@@ -113,6 +114,8 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
         originalData.companyContext,
       );
       setNarrativeResult(narrativeGenResult);
+    } catch (e) {
+      notifyError(e, { onRetry: handleGenerateNarrative });
     } finally {
       setIsGeneratingNarrative(false);
       setNarrativeProgress(undefined);
@@ -126,7 +129,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     try {
       const score = await analyzeAtsScore(editedResume, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
       setAtsScore(score);
-    } catch (e) { console.error(e); }
+    } catch (e) { notifyError(e, { onRetry: handleAnalyzeAts }); }
     finally { setIsLoadingAts(false); }
   };
 
@@ -137,7 +140,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     try {
       const score = await analyzeDetailedScore(editedResume, originalData.jobDescription, JSON.stringify(instruction), originalData.companyContext);
       setDetailedScore(score);
-    } catch (e) { console.error(e); }
+    } catch (e) { notifyError(e, { onRetry: handleAnalyzeDetailed }); }
     finally { setIsLoadingDetailed(false); }
   };
 
@@ -201,8 +204,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
       setAcceptedActions(new Set()); // 새 분석 결과 → 이전 수락 상태 초기화
       toast.success('현재 이력서로 재분석했습니다 — 점수와 제안이 갱신되었습니다');
     } catch (e) {
-      console.error(e);
-      toast.error('재분석 중 오류가 발생했습니다');
+      notifyError(e, { onRetry: handleReanalyzeClick, fallback: '재분석 중 오류가 발생했습니다' });
     } finally {
       setIsReanalyzing(false);
     }
