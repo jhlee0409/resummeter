@@ -177,6 +177,28 @@ const App: React.FC = () => {
     }
   }, [userData]);
 
+  // 편집한 이력서로 코칭/gapMap/점수를 다시 계산 (JD분석·회사리서치·근거뱅크는 재사용).
+  // editedResume는 ReviewStep 로컬에 그대로 유지되고, 분석 결과(result)만 갱신된다.
+  const handleReanalyze = useCallback(async (currentResume: string) => {
+    if (!instruction) throw new Error('분석 정보가 없어 재분석할 수 없습니다');
+    const coachingResult = await coachResume({
+      resumeText: currentResume,
+      jobDescription: userData.jobDescription,
+      instruction,
+      githubRepos: userData.githubRepos,
+      githubData: userData.githubData,
+      companyContext: userData.companyContext ?? null,
+    });
+    const scoring = calculateScore(coachingResult.gapMap, instruction, currentResume, userData.jobDescription, userData.companyContext ?? null);
+    setResult(prev => ({
+      ...coachingResult,
+      matchScore: scoring.matchScore,
+      scoringResult: scoring,
+      // GitHub/증빙 근거뱅크는 이력서 편집과 무관 → 기존 것 유지
+      evidenceBank: prev?.evidenceBank ?? coachingResult.evidenceBank,
+    }));
+  }, [instruction, userData]);
+
   const handleRestart = () => {
     track({ type: 'restart' });
     useFeatureStore.getState().resetAll();
@@ -268,6 +290,7 @@ const App: React.FC = () => {
                   result={result}
                   instruction={instruction!}
                   onRestart={handleRestart}
+                  onReanalyze={handleReanalyze}
                 />
               </div>
             )}
