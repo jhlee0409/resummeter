@@ -14,6 +14,7 @@ import { PipelinePanel } from './PipelinePanel';
 import type { PipelineResults } from '../features/review/services/pipelineService';
 import { analyzeAtsScore, analyzeDetailedScore } from '../features/ats-score/service';
 import { track } from '../shared/lib/analytics';
+import { printAsPdf, downloadAsWord } from '../shared/lib/exportDocument';
 import { toast } from 'sonner';
 import type { AtsScore, DetailedScore } from '../types';
 import { ErrorBoundary } from '../shared/ui/ErrorBoundary';
@@ -44,11 +45,14 @@ interface ReviewStepProps {
   result: CoachingResult;
   instruction: TailoredInstructionWithRequirements;
   onRestart: () => void;
+  /** 편집한 이력서로 코칭/점수를 다시 계산한다. */
+  onReanalyze?: (currentResume: string) => Promise<void>;
 }
 
 type ReviewTab = 'gap-map' | 'actions' | 'evidence' | 'resume' | 'narrative' | 'ats-score' | 'detailed-score' | 'career-statement' | 'cover-letter' | 'interview' | 'skill-gap' | 'linkedin' | 'versions' | 'about-statement' | 'practitioner' | 'examples' | 'gap-analysis';
 
-export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, instruction, onRestart }) => {
+export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, instruction, onRestart, onReanalyze }) => {
+  const [isReanalyzing, setIsReanalyzing] = useState(false);
   const [activeTab, setActiveTab] = useState<ReviewTab>('gap-map');
   const [visitedTabs, setVisitedTabs] = useState<Set<ReviewTab>>(new Set(['gap-map']));
 
@@ -177,6 +181,31 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  const handleExportPdf = () => {
+    track({ type: 'resume_download', format: 'pdf' });
+    printAsPdf('최적화 이력서', editedResume);
+  };
+
+  const handleExportWord = () => {
+    track({ type: 'resume_download', format: 'word' });
+    downloadAsWord('optimized-resume', '최적화 이력서', editedResume);
+  };
+
+  const handleReanalyzeClick = async () => {
+    if (!onReanalyze || isReanalyzing) return;
+    setIsReanalyzing(true);
+    try {
+      await onReanalyze(editedResume);
+      setAcceptedActions(new Set()); // 새 분석 결과 → 이전 수락 상태 초기화
+      toast.success('현재 이력서로 재분석했습니다 — 점수와 제안이 갱신되었습니다');
+    } catch (e) {
+      console.error(e);
+      toast.error('재분석 중 오류가 발생했습니다');
+    } finally {
+      setIsReanalyzing(false);
+    }
   };
 
   const handleCopy = async () => {
@@ -325,6 +354,22 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
 
       {/* Score Dashboard */}
       <ScoreDashboard result={result} originalData={originalData} atsScore={atsScore?.overall ?? null} prevAtsScore={prevAtsScore} isLoadingAts={isLoadingAts} />
+
+      {onReanalyze && (
+        <div className="flex items-center justify-between gap-3 flex-wrap px-1">
+          <p className="text-[11px] text-zinc-500">이력서를 수정했다면 현재 내용으로 점수·gap·코칭 제안을 다시 계산하세요.</p>
+          <button
+            onClick={handleReanalyzeClick}
+            disabled={isReanalyzing}
+            className="shrink-0 text-[12px] px-3.5 py-1.5 rounded-lg border border-brand-500/30 text-brand-300 hover:bg-brand-500/10 disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          >
+            <svg className={`w-3.5 h-3.5 ${isReanalyzing ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {isReanalyzing ? '재분석 중…' : '현재 이력서로 재분석'}
+          </button>
+        </div>
+      )}
 
       {/* Pipeline Panel */}
       <PipelinePanel
@@ -806,13 +851,25 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ originalData, result, in
           처음부터 다시
         </button>
         <button
+          onClick={handleExportWord}
+          className="px-3 py-2 text-[11px] font-semibold text-zinc-300 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
+        >
+          Word
+        </button>
+        <button
           onClick={handleDownload}
+          className="px-3 py-2 text-[11px] font-semibold text-zinc-300 border border-white/10 rounded-lg hover:bg-white/5 transition-colors"
+        >
+          Markdown
+        </button>
+        <button
+          onClick={handleExportPdf}
           className="px-4 py-2 text-[11px] font-bold text-white bg-gradient-to-r from-brand-500 to-brand-600 rounded-lg hover:from-brand-600 hover:to-brand-700 transition-all shadow-md shadow-brand-500/30 flex items-center gap-1.5"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
-          Markdown 다운로드
+          PDF로 내보내기
         </button>
       </div>
     </div>
