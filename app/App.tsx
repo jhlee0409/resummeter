@@ -10,6 +10,7 @@ import { generateTailoredInstruction } from '../core/analysis/jdAnalysis';
 import { coachResume } from '../core/analysis/coaching';
 import { enrichEvidenceBank, interpretEvidence, mergeEvidenceBank } from '../core/analysis/evidenceBank';
 import { track } from '../shared/lib/analytics';
+import { notifyError } from '../shared/lib/notify';
 import { getCachedAnalysis, setCachedAnalysis, getCachedAnalysisByKey } from '../features/review/services/analysisCache';
 import { PreviousAnalysesPanel } from '../features/review/PreviousAnalysesPanel';
 import { calculateScore } from '../core/scoring/scoringEngine';
@@ -172,7 +173,10 @@ const App: React.FC = () => {
     } catch (error) {
       console.error(error);
       invalidateCache().catch(() => {});
-      alert("AI 분석 중 오류가 발생했습니다. API 키와 입력값을 확인해주세요.");
+      notifyError(error, {
+        onRetry: () => handleStartAnalysis(freshGithubData),
+        fallback: 'AI 분석 중 오류가 발생했습니다. 입력값과 네트워크를 확인해주세요.',
+      });
       setCurrentStep(AppStep.UPLOAD);
     }
   }, [userData]);
